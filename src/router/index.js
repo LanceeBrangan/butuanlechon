@@ -98,12 +98,12 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthUserStore()
   const isAuthenticated = await authStore.isAuthenticated()
 
-  // 1️⃣ Block unauthenticated users from protected routes
+
   if (to.meta.requiresAuth && !isAuthenticated) {
     return next('/')
   }
 
-  // 2️⃣ Block authenticated users from guest-only routes
+
   if (to.meta.guestOnly && isAuthenticated) {
     return next('/dashboard')
   }
