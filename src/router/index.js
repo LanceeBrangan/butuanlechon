@@ -30,6 +30,7 @@ const router = createRouter({
       component: RegisterView,
       meta: {
         guestOnly: true,
+        requiresNavigation: true,
       },
     },
     {
@@ -38,6 +39,16 @@ const router = createRouter({
       component: ForgotPasswordView,
       meta: {
         guestOnly: true,
+        requiresNavigation: true,
+      },
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: ResetPasswordView,
+      meta: {
+        guestOnly: true,
+        requiresNavigation: true,
       },
     },
     {
@@ -89,10 +100,6 @@ const router = createRouter({
       path: '/reset-password',
       name: 'reset-password',
       component: ResetPasswordView,
-    },
-    {
-      path: '/confirmation',
-      component: () => import('@/views/system/ConfirmView.vue'),
     }
 
   ],
@@ -101,25 +108,21 @@ const router = createRouter({
 // Route guard for authentication
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthUserStore()
-
-  // Skip guard on initial route to allow login/register
-  if (from.name === undefined && !to.meta.requiresAuth) {
-    next()
-    return
-  }
-
   const isAuthenticated = await authStore.isAuthenticated()
+  const userRole = authStore.user?.role
 
-  // If route requires auth and user is not authenticated
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/')
-    return
-  }
+  // Handle 404 - Redirect invalid routes
+  if (to.matched.length === 0) return next('/')
 
-  // If route is guest-only and user is authenticated
+  //  Block direct URL access to certain pages (must navigate from app)
+  if (to.meta.requiresNavigation && !from.name) return next('/')
+
+  // 1️⃣ Block unauthenticated users from protected routes
+  if (to.meta.requiresAuth && !isAuthenticated) return next('/')
+
+  // 2️⃣ Block authenticated users from guest-only routes
   if (to.meta.guestOnly && isAuthenticated) {
-    next('/dashboard')
-    return
+    return next('/dashboard')
   }
 
   next()
