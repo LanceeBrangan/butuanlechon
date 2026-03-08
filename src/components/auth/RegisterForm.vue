@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRegister } from '@/composables/auth/register'
+import RegistrationConfirmationDialog from '@/components/auth/RegistrationConfirmationDialog.vue'
 import AlertNotification from '@/common/AlertNotification.vue'
 import {
   requiredValidator,
@@ -13,6 +14,20 @@ const { formData, formAction, refVForm, onFormSubmit } = useRegister()
 
 const isPasswordVisible = ref(false)
 const isPasswordConfirmVisible = ref(false)
+
+const showConfirmation = ref(false)
+const registeredEmail = ref('')
+
+const handleRegistrationSuccess = (email) => {
+  registeredEmail.value = email
+  showConfirmation.value = true
+  // Dialog handles redirect after user closes it
+}
+
+
+//Define the available roles
+const availableRoles = ['Manager', 'Staff', 'Cashier']
+
 </script>
 
 <template>
@@ -20,6 +35,11 @@ const isPasswordConfirmVisible = ref(false)
     :form-success-message="formAction.formSuccessMessage"
     :form-error-message="formAction.formErrorMessage"
   />
+
+<RegistrationConfirmationDialog
+  v-model="showConfirmation"
+  :email="registeredEmail"
+/>
 
   <v-form ref="refVForm" @submit.prevent="onFormSubmit">
     <v-card-text>
@@ -39,6 +59,16 @@ const isPasswordConfirmVisible = ref(false)
         required
         variant="outlined"
       />
+
+      <v-select
+        v-model="formData.role"
+        :items="availableRoles"
+        label="Role"
+        prepend-inner-icon="mdi-account-tag"
+        :rules="[requiredValidator]"
+        required
+        variant="outlined">
+      </v-select>
 
       <v-text-field
         v-model="formData.email"
@@ -90,8 +120,12 @@ const isPasswordConfirmVisible = ref(false)
       color="red-darken-4"
       :disabled="formAction.formProcess"
       :loading="formAction.formProcess"
+
     >
       Sign-up
     </v-btn>
+
+
+
   </v-form>
 </template>

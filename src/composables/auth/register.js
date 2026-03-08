@@ -2,6 +2,8 @@ import { supabase, formActionDefault } from '@/utils/supabase.js'
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 
+
+
 export function useRegister() {
   // Utilize pre-defined vue functions
   const router = useRouter()
@@ -13,6 +15,7 @@ export function useRegister() {
     email: '',
     password: '',
     password_confirmation: '',
+    role: null,
   }
   const formData = ref({
     ...formDataDefault,
@@ -22,10 +25,14 @@ export function useRegister() {
   })
   const refVForm = ref()
 
+
+
+
   // Register Functionality
   const onSubmit = async () => {
     // Reset Form Action utils
     formAction.value = { ...formActionDefault, formProcess: true }
+
 
     const { data, error } = await supabase.auth.signUp({
       email: formData.value.email,
@@ -34,7 +41,7 @@ export function useRegister() {
         data: {
           firstname: formData.value.firstname,
           lastname: formData.value.lastname,
-          //role: 'Administrator' // If role based; just change the string based on role
+          role: formData.value.role,
         }
       }
     })
@@ -43,18 +50,20 @@ export function useRegister() {
       // Add Error Message and Status Code
       formAction.value.formErrorMessage = error.message
       formAction.value.formStatus = error.status
-    } else if (data) {
-      // Add Success Message
-      formAction.value.formSuccessMessage = 'Successfully Registered Account.'
-      // Redirect Acct to Dashboard
-      router.replace('/dashboard')
-    }
+    } if (data) {
+  formAction.value.formSuccessMessage = 'Successfully Registered Account.'
+  // Redirect to confirmation page (pass email as query param)
+  router.replace(`/confirmation?email=${formData.value.email}`)
+}
+
 
     // Reset Form
     refVForm.value?.reset()
     // Turn off processing
     formAction.value.formProcess = false
   }
+
+
 
   // Trigger Validators
   const onFormSubmit = () => {

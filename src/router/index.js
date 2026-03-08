@@ -11,6 +11,7 @@ import DashboardView from '@/views/DashboardView.vue'
 import ProductView from '@/views/ProductView.vue'
 import DailyUsage from '@/views/DailyUsage.vue'
 import AccountSettings from '@/views/system/AccountSettings.vue'
+import ConfirmView from '@/views/system/ConfirmView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -45,7 +46,7 @@ const router = createRouter({
       component: DashboardView,
       meta: {
         requiresAuth: true,
-        role: 'Admin',
+        role: 'Manager',
       },
     },
     {
@@ -54,7 +55,7 @@ const router = createRouter({
       component: ProductView,
       meta: {
         requiresAuth: true,
-        role: 'Admin',
+        role: 'Manager',
       },
     },
     {
@@ -63,13 +64,17 @@ const router = createRouter({
       component: DailyUsage,
       meta: {
         requiresAuth: true,
-        role: 'Admin',
+        role: 'Manager',
       },
     },
     {
       path: '/reports',
       name: 'reports',
       component: ReportView,
+      meta: {
+        requiresAuth: true,
+        role: 'Manager',
+      },
     },
     {
       path: '/account/settings',
@@ -77,13 +82,17 @@ const router = createRouter({
       component: AccountSettings,
       meta: {
         requiresAuth: true,
-        role: 'User',
+        role: 'Staff, Cashier, Admin',
       },
     },
     {
       path: '/reset-password',
       name: 'reset-password',
       component: ResetPasswordView,
+    },
+    {
+      path: '/confirmation',
+      component: () => import('@/views/system/ConfirmView.vue'),
     }
 
   ],
