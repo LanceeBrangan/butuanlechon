@@ -120,7 +120,7 @@ const drawerItems = computed(() => [
               </v-list-item>
             </v-list>
               <v-chip class="mt-2 role-chip" label>
-              {{ authStore.userRole }}
+              {{ authStore.userRole?.role || 'No Role' }}
             </v-chip>
 
             <v-divider class="my-3"></v-divider>
