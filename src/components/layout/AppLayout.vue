@@ -1,5 +1,5 @@
 <script setup>
-import NavigationDrawer from '@/components/layout/navigation/NavigationDrawer.vue'
+import SideNavigation from './navigation/SideNavigation.vue'
 import TopProfileHeader from '@/components/layout/navigation/TopProfileHeader.vue'
 import { ref, onMounted, watch } from 'vue'
 import { useAuthUserStore } from '@/stores/authUser'
@@ -37,7 +37,7 @@ onMounted(async () => {
   <v-app>
     <!-- Navigation Drawer - shown when logged in (except on reset password page) -->
     <keep-alive>
-      <NavigationDrawer v-if="isLoggedIn && route.path !== '/reset-password'" />
+      <SideNavigation v-if="isLoggedIn && route.path !== '/reset-password'" />
     </keep-alive>
 
     <!-- Top Profile Header -->

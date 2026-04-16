@@ -26,21 +26,6 @@ onMounted(checkAuth)
 <template>
   <template v-if="isVisible">
     <v-navigation-drawer :model-value="drawer" class="nav-drawer-red" permanent>
-      <!-- Logo Section -->
-      <v-list-item class="mx-6 my-5">
-        <template v-slot:prepend>
-          <v-avatar size="160">
-            <v-img
-            src="/images/bl.png"
-            alt="BL & SG Logo"
-
-            />
-          </v-avatar>
-        </template>
-      </v-list-item>
-
-      <v-divider class="red-divider"></v-divider>
-
       <!-- Navigation Items -->
       <v-list nav>
         <v-list-item
@@ -53,7 +38,6 @@ onMounted(checkAuth)
           :to="to"
         />
       </v-list>
-
     </v-navigation-drawer>
   </template>
 </template>
@@ -99,7 +83,6 @@ onMounted(checkAuth)
 
 .nav-item:hover {
   background: rgba(139, 0, 0, 0.35) !important;
-
 }
 
 .nav-item-active {

@@ -14,7 +14,7 @@ export const useAuthUserStore = defineStore('authUser', () => {
     if (userData.value?.is_admin) return 'Super Administrator'
 
     // Check for 'role' (from your register function)
-    return userData.value?.role || 'No Role Assigned'
+    return userData.value.role || 'No Role Assigned'
   })
 
   // Reset State Action
