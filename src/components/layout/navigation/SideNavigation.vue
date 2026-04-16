@@ -1,165 +1,144 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import {
+  mainNav,
+  menuItemsNav1,
+  menuItemsNav2,
+  menuItemsNav3,
+  menuItemsNav4,
+  menuItemsNav5,
+} from './sideNavigation'
 import { useAuthUserStore } from '@/stores/authUser'
-import { mainNav } from './NavigationDrawer'
+import { ref, onMounted } from 'vue'
+import { useDisplay } from 'vuetify'
 
-const router = useRouter()
-const route = useRoute()
+const props = defineProps(['isDrawerVisible'])
+
+// Utilize pre-defined vue functions
+const { mobile } = useDisplay()
+
+// Use Pinia Store
 const authStore = useAuthUserStore()
-const drawer = ref(true)
-const isVisible = ref(false)
 
-// Check authentication status
-const checkAuth = async () => {
-  const isAuth = await authStore.isAuthenticated()
-  isVisible.value = isAuth && !['/', '/register'].includes(route.path)
+// Load Variables
+const noAccessPages = ref([])
+const editableMenuItemsNav1 = ref([...menuItemsNav1])
+const editableMenuItemsNav2 = ref([...menuItemsNav2])
+const editableMenuItemsNav3 = ref([...menuItemsNav3])
+const editableMenuItemsNav4 = ref([...menuItemsNav4])
+const editableMenuItemsNav5 = ref([...menuItemsNav5])
+
+// Filter pages base on role
+const onFilterPages = () => {
+  if (authStore.userRole === 'Super Administrator') return
+
+  const menuItems = [
+    { items: editableMenuItemsNav1, title: mainNav[0][0] },
+    { items: editableMenuItemsNav2, title: mainNav[1][0] },
+    { items: editableMenuItemsNav3, title: mainNav[2][0] },
+    { items: editableMenuItemsNav4, title: mainNav[3][0] },
+    { items: editableMenuItemsNav5, title: mainNav[4][0] },
+  ]
+
+  menuItems.forEach(({ items, title }) => {
+    items.value = items.value.filter((item) => authStore.authPages.includes(item[3]))
+    if (items.value.length === 0) noAccessPages.value.push(title)
+  })
 }
 
-// Watch for route changes
-watch(() => route.path, checkAuth)
-
-// Check auth status on component mount
-onMounted(checkAuth)
+// Load Functions during component rendering
+onMounted(() => {
+  onFilterPages()
+})
 </script>
 
 <template>
-  <template v-if="isVisible">
-    <v-navigation-drawer :model-value="drawer" class="nav-drawer-red" permanent>
-      <!-- Navigation Items -->
-      <v-list nav>
-        <v-list-item
-          v-for="([title, icon, to], i) in mainNav"
-          :key="i"
-          class="nav-item"
-          link
-          :prepend-icon="icon"
-          :title="title"
-          :to="to"
-        />
-      </v-list>
-    </v-navigation-drawer>
-  </template>
+  <v-navigation-drawer
+    :model-value="props.isDrawerVisible"
+    :persistent="mobile"
+    :temporary="mobile"
+    :permanent="!mobile"
+    close-delay="2000"
+    width="300"
+    expand-on-hover
+    rail
+  >
+    <v-list density="compact" nav>
+      <v-list-item
+        prepend-icon="mdi-view-dashboard"
+        title="Dashboard"
+        to="/dashboard"
+      ></v-list-item>
+
+      <v-divider></v-divider>
+
+      <v-list-group :key="i" v-for="([title, icon], i) in mainNav" fluid>
+        <template #activator="{ props }" v-if="!noAccessPages.includes(title)">
+          <v-list-item v-bind="props" :prepend-icon="icon" :title="title"></v-list-item>
+        </template>
+
+        <template v-if="title === mainNav[0][0]">
+          <v-list-item
+            v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav1"
+            :key="i"
+            :prepend-icon="icon"
+            :title="title"
+            :subtitle="subtitle ?? undefined"
+            :to="to ?? undefined"
+          ></v-list-item>
+        </template>
+
+        <template v-if="title === mainNav[1][0]">
+          <v-list-item
+            v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav2"
+            :key="i"
+            :prepend-icon="icon"
+            :title="title"
+            :subtitle="subtitle ?? undefined"
+            :to="to ?? undefined"
+          ></v-list-item>
+        </template>
+
+        <template v-if="title === mainNav[2][0]">
+          <v-list-item
+            v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav3"
+            :key="i"
+            :prepend-icon="icon"
+            :title="title"
+            :subtitle="subtitle ?? undefined"
+            :to="to ?? undefined"
+          ></v-list-item>
+        </template>
+
+        <template v-if="title === mainNav[3][0]">
+          <v-list-item
+            v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav4"
+            :key="i"
+            :prepend-icon="icon"
+            :title="title"
+            :subtitle="subtitle ?? undefined"
+            :to="to ?? undefined"
+          ></v-list-item>
+        </template>
+
+        <template v-if="title === mainNav[4][0]">
+          <v-list-item
+            v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav5"
+            :key="i"
+            :prepend-icon="icon"
+            :title="title"
+            :subtitle="subtitle ?? undefined"
+            :to="to ?? undefined"
+          ></v-list-item>
+        </template>
+      </v-list-group>
+
+      <v-divider></v-divider>
+
+      <v-list-item
+        prepend-icon="mdi-wrench"
+        title="Account Settings"
+        to="/account/settings"
+      ></v-list-item>
+    </v-list>
+  </v-navigation-drawer>
 </template>
-
-<style scoped>
-/* Navigation Drawer - Red Theme */
-.nav-drawer-red {
-  background: linear-gradient(180deg, #1a0505 0%, #2d0a0a 100%) !important;
-  border-right: 1px solid rgba(139, 0, 0, 0.3) !important;
-  position: fixed !important;
-  top: 0;
-  left: 0;
-  height: 100vh !important;
-  z-index: 1000;
-}
-
-/* App Bar - Red Theme */
-.app-bar-red {
-  background: linear-gradient(90deg, #8b0000 0%, #a52a2a 100%) !important;
-  box-shadow: 0 2px 12px rgba(139, 0, 0, 0.3) !important;
-}
-
-.app-bar-title {
-  color: white !important;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-/* Red Divider */
-.red-divider {
-  border-color: rgba(220, 20, 60, 0.3) !important;
-  border-width: 2px;
-  margin: 16px 0;
-}
-
-/* Navigation Items */
-.nav-item {
-  color: #ffe4e1 !important;
-  transition: all 0.3s ease;
-  border-radius: 12px;
-  margin: 6px 12px !important;
-}
-
-.nav-item:hover {
-  background: rgba(139, 0, 0, 0.35) !important;
-}
-
-.nav-item-active {
-  background: rgba(220, 20, 60, 0.3) !important;
-  border-left: 5px solid #dc143c !important;
-  font-weight: 700;
-  color: white !important;
-}
-
-.nav-item-active :deep(.v-icon) {
-  color: #dc143c !important;
-  transform: scale(1.1);
-}
-
-/* Navigation Icons */
-.nav-item :deep(.v-icon) {
-  color: #ffb6b6 !important;
-  transition: all 0.3s ease;
-}
-
-.nav-item:hover :deep(.v-icon) {
-  color: #ff6b6b !important;
-}
-
-/* List Item Title */
-.nav-item :deep(.v-list-item-title) {
-  font-weight: 500;
-  letter-spacing: 0.3px;
-  font-size: 0.95rem;
-}
-
-/* Search Box */
-.search-box {
-  background: rgba(255, 255, 255, 0.2) !important;
-  padding: 10px 20px;
-  margin: 0 60px;
-  display: flex;
-  align-items: center;
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  transition: all 0.3s ease;
-}
-
-.search-box:hover {
-  background: rgba(255, 255, 255, 0.25) !important;
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
-.search-input {
-  color: white;
-  background: none;
-  border: none;
-  width: 100%;
-  outline: none;
-  font-size: 0.95rem;
-}
-
-.search-input::placeholder {
-  color: rgba(255, 255, 255, 0.85);
-  opacity: 1;
-}
-
-/* Avatar Button */
-.v-btn :deep(.v-avatar) {
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  transition: all 0.3s ease;
-}
-
-.v-btn:hover :deep(.v-avatar) {
-  border-color: white;
-  transform: scale(1.05);
-}
-
-/* App Bar Icons */
-.app-bar-red :deep(.v-icon),
-.app-bar-red :deep(.v-btn) {
-  color: white !important;
-}
-</style>
