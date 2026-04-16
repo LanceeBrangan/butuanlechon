@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthUserStore } from '@/stores/authUser'
+import { routes } from './routes'
 
 // Views
 import ReportView from '@/views/auth/ReportView.vue'
