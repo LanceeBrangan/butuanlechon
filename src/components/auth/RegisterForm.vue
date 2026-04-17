@@ -24,10 +24,8 @@ const handleRegistrationSuccess = (email) => {
   // Dialog handles redirect after user closes it
 }
 
-
 //Define the available roles
-const availableRoles = ['Manager', 'Staff', 'Cashier']
-
+const availableRoles = ['Staff']
 </script>
 
 <template>
@@ -36,10 +34,7 @@ const availableRoles = ['Manager', 'Staff', 'Cashier']
     :form-error-message="formAction.formErrorMessage"
   />
 
-<RegistrationConfirmationDialog
-  v-model="showConfirmation"
-  :email="registeredEmail"
-/>
+  <RegistrationConfirmationDialog v-model="showConfirmation" :email="registeredEmail" />
 
   <v-form ref="refVForm" @submit.prevent="onFormSubmit">
     <v-card-text>
@@ -67,7 +62,8 @@ const availableRoles = ['Manager', 'Staff', 'Cashier']
         prepend-inner-icon="mdi-account-tag"
         :rules="[requiredValidator]"
         required
-        variant="outlined">
+        variant="outlined"
+      >
       </v-select>
 
       <v-text-field
@@ -120,12 +116,8 @@ const availableRoles = ['Manager', 'Staff', 'Cashier']
       color="red-darken-4"
       :disabled="formAction.formProcess"
       :loading="formAction.formProcess"
-
     >
       Sign-up
     </v-btn>
-
-
-
   </v-form>
 </template>

@@ -13,7 +13,7 @@ export const supabaseAdmin = createClient(import.meta.env.VITE_SUPABASE_URL, ser
     autoRefreshToken: false,
     persistSession: false,
     detectSessionInUrl: false,
-    storageKey: 'supabase-admin', // 👈 critical fix
+    storageKey: 'supabase-admin',
   },
 })
 

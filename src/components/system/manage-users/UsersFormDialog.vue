@@ -15,7 +15,6 @@ const emit = defineEmits(['update:isDialogVisible'])
 const { mdAndDown } = useDisplay()
 
 // Use Pinia Store
-const branchesStore = useBranchesStore()
 const userRolesStore = useUserRolesStore()
 const usersStore = useUsersStore()
 
@@ -100,7 +99,6 @@ const onFormReset = () => {
 // Load Functions during component rendering
 onMounted(async () => {
   if (userRolesStore.userRoles.length == 0) await userRolesStore.getUserRoles()
-  if (branchesStore.branches.length == 0) await branchesStore.getBranches()
 })
 </script>
 
