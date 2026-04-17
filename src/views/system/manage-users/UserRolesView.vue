@@ -1,5 +1,5 @@
 <script setup>
-import UserRolesList from '@/components/system/manage-users/UserRolesList.vue'
+import UserRoleList from '@/components/system/manage-users/UserRoleList.vue'
 import SideNavigation from '@/components/layout/navigation/SideNavigation.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useDisplay } from 'vuetify'
@@ -42,7 +42,7 @@ const isDrawerVisible = ref(mobile.value ? false : true)
           </template>
         </v-card>
 
-        <UserRolesList></UserRolesList>
+        <UserRoleList></UserRoleList>
       </v-container>
     </template>
   </AppLayout>

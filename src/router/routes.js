@@ -12,8 +12,8 @@ import AccountSettings from '@/views/system/AccountSettings.vue'
 import ResetPasswordView from '@/views/auth/ResetPasswordView.vue'
 
 //Users
-import UserRolesView from '@/components/system/manage-users/UserRolesView.vue'
-import UsersView from '@/components/system/manage-users/UsersView.vue'
+import UserRolesView from '@/views/system/manage-users/UserRolesView.vue'
+import UsersView from '@/views/system/manage-users/UsersView.vue'
 
 //Product
 import ProductView from '@/views/ProductView.vue'
