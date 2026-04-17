@@ -1,6 +1,6 @@
 <script setup>
 import AlertNotification from '@/common/AlertNotification.vue'
-import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import ConfirmDialog from '@/common/ConfirmDialog.vue'
 import { formActionDefault } from '@/utils/supabase'
 import UsersFormDialog from './UsersFormDialog.vue'
 import { tableHeaders } from './usersTableUtils'
