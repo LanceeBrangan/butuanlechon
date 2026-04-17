@@ -119,6 +119,9 @@ const drawerItems = computed(() => [
                 </template>
               </v-list-item>
             </v-list>
+              <v-chip class="mt-2 role-chip" label>
+              {{ authStore.userRole }}
+            </v-chip>
 
             <v-divider class="my-3"></v-divider>
 
@@ -203,6 +206,13 @@ const drawerItems = computed(() => [
   font-weight: 500;
   border-radius: 2px;
   text-transform: none;
+}
+
+.role-chip {
+  width: 100%;
+  justify-content: center;
+  background-color: #97a88eea;
+  font-weight: 600;
 }
 
 </style>

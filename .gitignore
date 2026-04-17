@@ -30,3 +30,4 @@ coverage
 *.tsbuildinfo
 
 .env
+REGISTRATION_CONFIRMATION_INTEGRATION.md

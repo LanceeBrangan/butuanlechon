@@ -47,27 +47,9 @@ async function deleteAll() {
   <div class="app-background">
     <v-container class="pa-8">
       <div class="d-flex justify-space-between align-center mb-6">
-        <h1>Daily Reports</h1>
+        <h1>Reports</h1>
 
-        <div class="d-flex gap-2">
-          <v-btn
-            v-if="selected.length > 0"
-            color="error"
-            variant="elevated"
-            @click="deleteDialog = true"
-          >
-            Delete Selected ({{ selected.length }})
-          </v-btn>
 
-          <v-btn
-            v-if="reportsStore.dailyReports.length > 0"
-            color="error"
-            variant="outlined"
-            @click="deleteAllDialog = true"
-          >
-            Delete All
-          </v-btn>
-        </div>
       </div>
 
       <v-table>

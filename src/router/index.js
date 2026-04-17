@@ -1,129 +1,56 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthUserStore } from '@/stores/authUser'
-
-// Views
-import ReportView from '@/views/auth/ReportView.vue'
-import LoginView from '@/views/auth/LoginView.vue'
-import RegisterView from '@/views/auth/RegisterView.vue'
-import ForgotPasswordView from '@/views/auth/ForgotPasswordView.vue'
-import ResetPasswordView from '@/views/auth/ResetPasswordView.vue'
-import DashboardView from '@/views/DashboardView.vue'
-import ProductView from '@/views/ProductView.vue'
-import DailyUsage from '@/views/DailyUsage.vue'
-import AccountSettings from '@/views/system/AccountSettings.vue'
+import { routes } from './routes'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: '/',
-      name: 'login',
-      component: LoginView,
-      meta: {
-        guestOnly: true,
-      },
-    },
-    {
-      path: '/register',
-      name: 'register',
-      component: RegisterView,
-      meta: {
-        guestOnly: true,
-        requiresNavigation: true,
-      },
-    },
-    {
-      path: '/forgot-password',
-      name: 'forgot-password',
-      component: ForgotPasswordView,
-      meta: {
-        guestOnly: true,
-        requiresNavigation: true,
-      },
-    },
-    {
-      path: '/reset-password',
-      name: 'reset-password',
-      component: ResetPasswordView,
-      meta: {
-        guestOnly: true,
-        requiresNavigation: true,
-      },
-    },
-    {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: DashboardView,
-      meta: {
-        requiresAuth: true,
-        role: 'Admin',
-      },
-    },
-    {
-      path: '/products',
-      name: 'products',
-      component: ProductView,
-      meta: {
-        requiresAuth: true,
-        role: 'Admin',
-      },
-    },
-    {
-      path: '/daily-usage',
-      name: 'daily-usage',
-      component: DailyUsage,
-      meta: {
-        requiresAuth: true,
-        role: 'Admin',
-      },
-    },
-    {
-      path: '/reports',
-      name: 'reports',
-      component: ReportView,
-      meta: {
-        requiresAuth: true,
-        role: 'Admin',
-      },
-    },
-    {
-      path: '/account/settings',
-      name: 'account-settings',
-      component: AccountSettings,
-      meta: {
-        requiresAuth: true,
-        role: 'User',
-      },
-    },
-  ],
+  routes,
 })
 
-// Route guard for authentication
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to) => {
+  // Use Pinia Store
   const authStore = useAuthUserStore()
-  const isAuthenticated = await authStore.isAuthenticated()
-  const userRole = authStore.user?.role
+  // Load if user is logged in
+  const isLoggedIn = await authStore.isAuthenticated()
 
-  // Handle 404 - Redirect invalid routes
-  if (to.matched.length === 0) return next('/')
-
-  //  Block direct URL access to certain pages (must navigate from app)
-  if (to.meta.requiresNavigation && !from.name) return next('/')
-
-  // 1️⃣ Block unauthenticated users from protected routes
-  if (to.meta.requiresAuth && !isAuthenticated) return next('/')
-
-  // 2️⃣ Block authenticated users from guest-only routes
-  if (to.meta.guestOnly && isAuthenticated) return next('/dashboard')
-
-  // 3️⃣ Block users from accessing routes not allowed for their role
-  if (to.meta.requiresAuth && to.meta.role && userRole && userRole !== to.meta.role) {
-    return next(
-      userRole === 'Admin' ? '/dashboard' : userRole === 'User' ? '/account/settings' : '/',
-    )
+  // Redirect to appropriate page if accessing home route
+  if (to.name === 'home') {
+    return isLoggedIn ? { name: 'dashboard' } : { name: 'login' }
   }
 
-  next()
+  // If logged in, prevent access to login or register pages
+  if (isLoggedIn && (to.name === 'login' || to.name === 'register')) {
+    // redirect the user to the dashboard page
+    return { name: 'dashboard' }
+  }
+
+  // If not logged in, prevent access to system pages
+  if (!isLoggedIn && to.meta.requiresAuth) {
+    // redirect the user to the login page
+    return { name: 'login' }
+  }
+
+  // Check if the user is logged in
+  if (isLoggedIn) {
+    // Load user data if not already done
+    if (!authStore.userData) await authStore.getUserInformation()
+
+    // Get the user role
+    const isSuperAdmin = authStore.userRole === 'Super Administrator'
+
+    // Load if not super admin
+    if (!isSuperAdmin) {
+      if (authStore.authPages.length == 0) await authStore.getAuthPages(authStore.userRole)
+
+      // Check page that is going to if it is in role pages
+      const isAccessible = authStore.authPages.includes(to.path)
+
+      // Forbid access if not in role pages and if page is not default page
+      if (!isAccessible && !to.meta.isDefault) {
+        return { name: 'forbidden' }
+      }
+    }
+  }
 })
 
 export default router
