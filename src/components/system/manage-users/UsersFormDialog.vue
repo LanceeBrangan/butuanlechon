@@ -3,6 +3,7 @@ import { emailValidator, passwordValidator, requiredValidator } from '@/utils/va
 import AlertNotification from '@/common/AlertNotification.vue'
 import { formActionDefault } from '@/utils/supabase.js'
 import { useUserRolesStore } from '@/stores/userRoles'
+import { useBranchesStore } from '@/stores/branches'
 import { useUsersStore } from '@/stores/users'
 import { onMounted, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
@@ -10,6 +11,7 @@ import { useDisplay } from 'vuetify'
 const props = defineProps(['isDialogVisible', 'itemData', 'tableOptions'])
 
 const emit = defineEmits(['update:isDialogVisible'])
+const branchesStore = useBranchesStore()
 
 // Utilize pre-defined vue functions
 const { mdAndDown } = useDisplay()
@@ -99,6 +101,7 @@ const onFormReset = () => {
 // Load Functions during component rendering
 onMounted(async () => {
   if (userRolesStore.userRoles.length == 0) await userRolesStore.getUserRoles()
+  if (branchesStore.branches.length == 0) await branchesStore.getBranches()
 })
 </script>
 

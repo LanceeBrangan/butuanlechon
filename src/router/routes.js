@@ -14,6 +14,7 @@ import ResetPasswordView from '@/views/auth/ResetPasswordView.vue'
 //Users
 import UserRolesView from '@/views/system/manage-users/UserRolesView.vue'
 import UsersView from '@/views/system/manage-users/UsersView.vue'
+import BranchesView from '@/views/system/manage-users/BranchesView.vue'
 
 //Product
 import ProductView from '@/views/ProductView.vue'
@@ -97,6 +98,12 @@ export const routes = isDefaced
         path: '/manage/users',
         name: 'manage-users',
         component: UsersView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: '/manage/branches',
+        name: 'manage-branches',
+        component: BranchesView,
         meta: { requiresAuth: true },
       },
       //Password Reset
