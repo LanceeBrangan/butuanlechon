@@ -10,7 +10,7 @@ export const mainNav = [
 
 export const menuItemsNav1 = [
   ['List of Branches', 'mdi-store', '', '/manage/branches'],
-  ['User Roles', 'mdi-tag-multiple', '', '/manage/user/roles'],
+  ['User Roles', 'mdi-tag-multiple', '', '/manage/users/roles'],
   ['Users Management', 'mdi-account-multiple', '', '/manage/users'],
 ]
 export const menuItemsNav2 = [
