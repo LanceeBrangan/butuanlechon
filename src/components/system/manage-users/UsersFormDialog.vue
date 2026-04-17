@@ -1,9 +1,8 @@
 <script setup>
 import { emailValidator, passwordValidator, requiredValidator } from '@/utils/validators'
-import AlertNotification from '@/components/common/AlertNotification.vue'
+import AlertNotification from '@/common/AlertNotification.vue'
 import { formActionDefault } from '@/utils/supabase.js'
 import { useUserRolesStore } from '@/stores/userRoles'
-import { useBranchesStore } from '@/stores/branches'
 import { useUsersStore } from '@/stores/users'
 import { onMounted, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'

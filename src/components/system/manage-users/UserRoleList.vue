@@ -1,6 +1,6 @@
 <script setup>
-import AlertNotification from '@/components/common/AlertNotification.vue'
-import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import AlertNotification from '@/common/AlertNotification.vue'
+import ConfirmDialog from '@/common/ConfirmDialog.vue'
 import UserRolesFormDialog from './UserRolesFormDialog.vue'
 import { useUserRolesStore } from '@/stores/userRoles'
 import { formActionDefault } from '@/utils/supabase'

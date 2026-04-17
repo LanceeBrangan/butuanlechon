@@ -7,7 +7,7 @@ import {
   menuItemsNav4,
   menuItemsNav5,
 } from '@/components/layout/navigation/sideNavigation'
-import AlertNotification from '@/components/common/AlertNotification.vue'
+import AlertNotification from '@/common/AlertNotification.vue'
 import { formActionDefault } from '@/utils/supabase.js'
 import { useUserRolesStore } from '@/stores/userRoles'
 import { requiredValidator } from '@/utils/validators'
