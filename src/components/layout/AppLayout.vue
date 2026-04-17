@@ -36,14 +36,10 @@ onMounted(async () => {
 <template>
   <v-app>
     <!-- Navigation Drawer - shown when logged in (except on reset password page) -->
-    <keep-alive>
-      <SideNavigation v-if="isLoggedIn && route.path !== '/reset-password'" />
-    </keep-alive>
+    <SideNavigation v-if="isLoggedIn"></SideNavigation>
 
     <!-- Top Profile Header -->
-    <keep-alive>
-      <TopProfileHeader v-if="isLoggedIn && route.path !== '/reset-password'" />
-    </keep-alive>
+    <TopProfileHeader v-if="isLoggedIn"></TopProfileHeader>
 
     <!-- Main Content -->
     <v-main>
