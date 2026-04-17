@@ -10,11 +10,10 @@ import NotFoundView from '@/views/errors/NotFoundView.vue'
 import DashboardView from '@/views/DashboardView.vue'
 import AccountSettings from '@/views/system/AccountSettings.vue'
 import ResetPasswordView from '@/views/auth/ResetPasswordView.vue'
-import PasswordResetView from '@/views/auth/PasswordResetView.vue'
 
 //Users
-import UserRolesView from '@/views/system/manage-users/UserRolesView.vue'
-import UsersView from '@/views/system/manage-users/UsersView.vue'
+import UserRolesView from '@/components/system/manage-users/UserRolesView.vue'
+import UsersView from '@/components/system/manage-users/UsersView.vue'
 
 //Product
 import ProductView from '@/views/ProductView.vue'
@@ -105,12 +104,6 @@ export const routes = isDefaced
         path: '/reset-password',
         name: 'reset-password',
         component: ResetPasswordView,
-        meta: { requiresAuth: false },
-      },
-      {
-        path: '/password-reset',
-        name: 'password-reset',
-        component: PasswordResetView,
         meta: { requiresAuth: false },
       },
 
