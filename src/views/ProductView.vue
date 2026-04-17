@@ -4,6 +4,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useProducts } from '@/composables/useProducts.js'
 
 const router = useRouter()
+const isRefreshing = ref(false)
 
 const {
   products,
@@ -229,6 +230,20 @@ const submitDeduct = () => {
   deductProduct(selectedProductId.value, Number(deductQuantity.value))
   closeDeductDialog()
 }
+const refreshInventory = async () => {
+  isRefreshing.value = true
+  try {
+    await fetchProducts()
+  } finally {
+    // Add a slight delay for better UX so the user sees the spin
+    setTimeout(() => {
+      isRefreshing.value = false
+    }, 500)
+  }
+}
+
+
+
 </script>
 
 <template>
@@ -238,7 +253,7 @@ const submitDeduct = () => {
       <!-- Header -->
       <v-row class="mb-8 header-container pa-4 pa-md-8 rounded-xl">
         <v-col
-          cols="12"
+          cols="11"
           class="d-flex flex-column flex-md-row justify-md-space-between align-center ga-4 ga-md-0"
         >
           <h1 class="page-title">Product Inventory</h1>
@@ -257,6 +272,8 @@ const submitDeduct = () => {
               <span class="hidden-sm-and-up">Add</span>
             </v-btn>
 
+
+
             <!--Deduct Product Button -->
             <v-btn
               class="deduct-product-btn px-6 px-sm-10 py-2 text-body-2 text-sm-body-1 font-weight-bold flex-grow-1 flex-sm-grow-0"
@@ -269,7 +286,25 @@ const submitDeduct = () => {
               <span class="hidden-xs">Deduct Product</span>
               <span class="hidden-sm-and-up">Deduct</span>
             </v-btn>
+
+
+
           </div>
+        </v-col>
+
+        <v-col cols="1">
+             <!-- Refresh Button -->
+              <v-btn
+              icon
+              variant="text"
+              color="white"
+              :loading="isRefreshing"
+              @click="refreshInventory"
+              class="my-5"
+            >
+              <v-icon>mdi-refresh</v-icon>
+              <v-tooltip activator="parent" location="top">Refresh Inventory</v-tooltip>
+            </v-btn>
         </v-col>
       </v-row>
 

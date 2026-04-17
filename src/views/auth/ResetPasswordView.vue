@@ -1,5 +1,15 @@
 <script setup>
 import ResetPassword from '@/components/auth/ResetPassword.vue'
+
+
+onMounted(() => {
+  const hash = window.location.hash
+
+  if (!hash.includes('access_token')) {
+    router.push('/')
+  }
+})
+
 </script>
 
 <template>

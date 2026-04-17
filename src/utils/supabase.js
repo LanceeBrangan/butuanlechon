@@ -1,19 +1,21 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Create a single supabase client for interacting with your database
+// 👉 Create a single supabase client for interacting with your database
 export const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY,
 )
-// Returns the session object, not just true/false
-export const isAuthenticated = async () => {
-  const { data, error } = await supabase.auth.getSession()
-  if (error) {
-    console.error('Error getting session:', error.message)
-    return null
-  }
-  return data.session
-}
+
+const serviceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE
+
+export const supabaseAdmin = createClient(import.meta.env.VITE_SUPABASE_URL, serviceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+    detectSessionInUrl: false,
+    storageKey: 'supabase-admin',
+  },
+})
 
 // 👉 Form Action utils
 export const formActionDefault = {

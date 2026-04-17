@@ -9,9 +9,12 @@ export const useAuthUserStore = defineStore('authUser', () => {
   const authBranchIds = ref([])
 
   // Getters
-  // Computed Properties; Use for getting the state but not modifying its reactive state
+  // FIXED: Changed 'user_role' to 'role' to match your registration data
   const userRole = computed(() => {
-    return userData.value?.is_admin ? 'Super Administrator' : userData.value.user_role
+    if (userData.value?.is_admin) return 'Super Administrator'
+
+    // Check for 'role' (from your register function)
+    return userData.value.role || 'No Role Assigned'
   })
 
   // Reset State Action
@@ -29,6 +32,9 @@ export const useAuthUserStore = defineStore('authUser', () => {
     if (data.session) {
       const { id, email, user_metadata } = data.session.user
       userData.value = { id, email, ...user_metadata }
+
+      // OPTIONAL: Automatically fetch pages based on the role found
+      // if (userData.value.role) await getAuthPages(userData.value.role)
     }
 
     return !!data.session
@@ -38,41 +44,46 @@ export const useAuthUserStore = defineStore('authUser', () => {
   async function getUserInformation() {
     const {
       data: {
-        // Retrieve Id, Email and Metadata thru Destructuring
         user: { id, email, user_metadata },
       },
     } = await supabase.auth.getUser()
 
-    // Set the retrieved information to state
     userData.value = { id, email, ...user_metadata }
   }
 
   // Retrieve User Roles Pages
   async function getAuthPages(name) {
+    if (!name) return // Safety check
+
     const { data } = await supabase
       .from('user_roles')
       .select('*, pages: user_role_pages (page)')
-      .eq('user_role', name)
+      .eq('user_role', name) // Ensure your DB column is actually named 'user_role'
 
-    // Set the retrieved data to state
-    if (data.length > 0) authPages.value = data[0].pages.map((p) => p.page)
+    if (data && data.length > 0 && data[0].pages) {
+      authPages.value = data[0].pages.map((p) => p.page)
+    }
   }
 
   // Retrieve Branch Ids
   async function getAuthBranchIds() {
+    // Safety check: ensure branch exists before splitting
+    if (!userData.value?.branch) return
+
     const { data } = await supabase
       .from('branches')
       .select('id')
       .in('name', userData.value.branch.split(','))
 
-    authBranchIds.value = data.map((b) => b.id)
+    if (data) {
+      authBranchIds.value = data.map((b) => b.id)
+    }
   }
 
   // Update User Information
   async function updateUserInformation(updatedData) {
     const {
       data: {
-        // Retrieve Id, Email and Metadata thru Destructuring
         user: { id, email, user_metadata },
       },
       error,
@@ -82,21 +93,16 @@ export const useAuthUserStore = defineStore('authUser', () => {
       },
     })
 
-    // Check if it has error
     if (error) {
       return { error }
-    }
-    // If no error set updatedData to userData state
-    else if (user_metadata) {
+    } else if (user_metadata) {
       userData.value = { id, email, ...user_metadata }
-
       return { data: userData.value }
     }
   }
 
   // Update User Profile Image
   async function updateUserImage(file) {
-    // 1. Ensure user is loaded
     if (!userData.value?.id) {
       await getUserInformation()
     }
@@ -108,11 +114,10 @@ export const useAuthUserStore = defineStore('authUser', () => {
     const filePath = `${userData.value.id}-avatar.png`
 
     try {
-      // 2. Upload to the CORRECT bucket with cache-busting parameter
       const { data, error } = await supabase.storage
-        .from('butuanlechon') // ✅ must exist
+        .from('butuanlechon')
         .upload(filePath, file, {
-          cacheControl: '0', // No cache - always get fresh image
+          cacheControl: '0',
           upsert: true,
           contentType: file.type || 'image/png',
         })
@@ -122,12 +127,10 @@ export const useAuthUserStore = defineStore('authUser', () => {
         return { error: { message: error.message, status: error.status || 500 } }
       }
 
-      // 3. Get public URL from SAME bucket with cache-busting timestamp
       const timestamp = new Date().getTime()
       const { data: imageData } = supabase.storage.from('butuanlechon').getPublicUrl(filePath)
       const cacheBustedUrl = `${imageData.publicUrl}?t=${timestamp}`
 
-      // 4. Save URL to user metadata with slight delay to ensure CDN propagation
       await new Promise(resolve => setTimeout(resolve, 200))
 
       return await updateUserInformation({

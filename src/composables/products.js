@@ -103,7 +103,7 @@ export const useProductsStore = defineStore('products', () => {
   async function updateProductImage(file, filename) {
     // Upload the file with the file name and file extension
     const { data } = await supabase.storage
-      .from('shirlix')
+      .from('butuanlechon')
       .upload('products/' + getSlugText(filename) + '.png', file, {
         cacheControl: '3600',
         upsert: true,
