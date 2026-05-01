@@ -205,8 +205,8 @@ const handleLogout = () => router.push('/')
 </script>
 
 <template>
-      <div class="app-background">
-        <v-container class="pa-8">
+  <div class="app-background">
+    <v-container class="pa-8">
           <!-- Current Date Display -->
           <v-alert type="info" variant="tonal" class="mb-4" prominent>
             <template #prepend>
