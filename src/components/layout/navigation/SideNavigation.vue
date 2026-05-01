@@ -53,11 +53,7 @@ onMounted(() => {
 
 <template>
   <v-navigation-drawer
-    :model-value="props.isDrawerVisible"
-    :persistent="mobile"
-    :temporary="mobile"
-    :permanent="!mobile"
-    close-delay="2000"
+    permanent
     width="300"
     expand-on-hover
     rail
