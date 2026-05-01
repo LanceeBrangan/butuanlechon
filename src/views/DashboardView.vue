@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { useAuthUserStore } from '@/stores/authUser'
 import { useProducts } from '@/composables/useProducts'
 import Chart from 'chart.js/auto'
-import AppLayout from '@/components/layout/AppLayout.vue'
 
 const router = useRouter()
 
@@ -206,10 +205,8 @@ const handleLogout = () => router.push('/')
 </script>
 
 <template>
-  <AppLayout :is-with-app-bar-nav-icon="true">
-    <template #content>
-      <div class="app-background">
-        <v-container class="pa-8">
+  <div class="app-background">
+    <v-container class="pa-8">
           <!-- Current Date Display -->
           <v-alert type="info" variant="tonal" class="mb-4" prominent>
             <template #prepend>
@@ -418,8 +415,6 @@ const handleLogout = () => router.push('/')
           </v-dialog>
         </v-container>
       </div>
-    </template>
-  </AppLayout>
 </template>
 
 <style scoped>
