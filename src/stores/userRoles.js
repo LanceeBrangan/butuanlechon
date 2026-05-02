@@ -28,6 +28,10 @@ export const useUserRolesStore = defineStore('userRoles', () => {
 
     const { data, error } = await supabase.from('user_roles').insert([roleData]).select()
 
+    if (error) {
+      return { data, error }
+    }
+
     await updateUserRolePages(data[0].id, pages)
 
     return { data, error }
@@ -42,6 +46,10 @@ export const useUserRolesStore = defineStore('userRoles', () => {
       .update(roleData)
       .eq('id', roleData.id)
       .select()
+
+    if (error) {
+      return { data, error }
+    }
 
     await updateUserRolePages(formData.id, pages)
 

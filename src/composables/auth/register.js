@@ -15,7 +15,6 @@ export function useRegister() {
     email: '',
     password: '',
     password_confirmation: '',
-    role: null,
   }
   const formData = ref({
     ...formDataDefault,
@@ -41,7 +40,6 @@ export function useRegister() {
         data: {
           firstname: formData.value.firstname,
           lastname: formData.value.lastname,
-          role: formData.value.role,
         }
       }
     })

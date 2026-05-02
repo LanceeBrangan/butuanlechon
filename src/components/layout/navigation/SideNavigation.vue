@@ -67,8 +67,8 @@ onMounted(() => {
 
       <v-divider></v-divider>
 
-      <v-list-group :key="i" v-for="([title, icon], i) in mainNav" fluid>
-        <template #activator="{ props }" v-if="!noAccessPages.includes(title)">
+      <v-list-group :key="i" v-for="([title, icon], i) in mainNav" fluid v-if="!noAccessPages.includes(title)">
+        <template #activator="{ props }">
           <v-list-item v-bind="props" :prepend-icon="icon" :title="title"></v-list-item>
         </template>
 

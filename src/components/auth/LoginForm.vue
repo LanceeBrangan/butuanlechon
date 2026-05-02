@@ -44,7 +44,7 @@ const isPasswordVisible = ref(false)
             class="text-body-2 text-sm-body-1"
             size="small"
             color="red-darken-4"
-            @click="$router.push('/forgot-password')"
+            @click="$router.push('/reset-password')"
           >
             Forgot Password?
           </v-btn>
