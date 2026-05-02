@@ -43,8 +43,7 @@ onMounted(async () => {
       <v-app-bar color="red-darken-3" elevation="1">
         <v-app-bar-nav-icon
           v-if="props.isWithAppBarNavIcon && isLoggedIn"
-          icon="mdi-menu"
-          @click="isDrawerVisible = !isDrawerVisible"
+
         >
         </v-app-bar-nav-icon>
 

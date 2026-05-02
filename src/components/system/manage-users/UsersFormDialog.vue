@@ -47,7 +47,7 @@ watch(
   () => {
     isUpdate.value = props.itemData ? true : false
     formData.value = props.itemData
-      ? { ...props.itemData, branch: props.itemData.branch.split(',') }
+      ? { ...props.itemData, branch: props.itemData.branch ? props.itemData.branch.split(',') : [] }
       : { ...formDataDefault }
   },
 )
@@ -190,11 +190,13 @@ onMounted(async () => {
             <v-col cols="12">
               <v-text-field
                 v-model="formData.password"
-                label="Password"
+                :label="isUpdate ? 'Password (optional)' : 'Password'"
                 :type="isPasswordVisible ? 'text' : 'password'"
                 :append-inner-icon="isPasswordVisible ? 'mdi-eye-off' : 'mdi-eye'"
                 @click:append-inner="isPasswordVisible = !isPasswordVisible"
-                :rules="[requiredValidator, passwordValidator]"
+                :rules="isUpdate
+                  ? formData.password ? [passwordValidator] : []
+                  : [requiredValidator, passwordValidator]"
               ></v-text-field>
             </v-col>
           </v-row>

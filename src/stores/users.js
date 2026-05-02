@@ -44,9 +44,16 @@ export const useUsersStore = defineStore('users', () => {
   async function updateUser(formData) {
     const { email, password, branch, ...userMetadata } = formData
 
-    return await supabaseAdmin.auth.admin.updateUserById(formData.id, {
-      user_metadata: { ...userMetadata, password, branch: branch.toString() },
-    })
+    const updatePayload = {
+      user_metadata: { ...userMetadata, branch: branch.toString() },
+    }
+
+    // Only include password if provided
+    if (password) {
+      updatePayload.password = password
+    }
+
+    return await supabaseAdmin.auth.admin.updateUserById(formData.id, updatePayload)
   }
 
   // Delete User

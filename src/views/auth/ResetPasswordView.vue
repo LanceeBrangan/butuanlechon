@@ -1,12 +1,21 @@
 <script setup>
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { supabase } from '@/utils/supabase'
 import ResetPassword from '@/components/auth/ResetPassword.vue'
 
+const router = useRouter()
 
-onMounted(() => {
+onMounted(async () => {
+  // Check if user has a valid recovery session from Supabase
+  const { data } = await supabase.auth.getSession()
+
+  // Allow access if there's a recovery session OR an access_token in URL
   const hash = window.location.hash
+  const hasAccessToken = hash.includes('access_token')
 
-  if (!hash.includes('access_token')) {
-    router.push('/')
+  if (!data.session && !hasAccessToken) {
+    router.push('/login')
   }
 })
 
