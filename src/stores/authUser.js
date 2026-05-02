@@ -11,11 +11,11 @@ export const useAuthUserStore = defineStore('authUser', () => {
   // Getters
 
 const userRole = computed(() => {
-  if (!userData.value) return 'No Role Assigned'        // guard against null
+  if (!userData.value) return 'No Role Assigned'
   if (userData.value?.is_admin) return 'Super Administrator'
-  return userData.value?.user_role                       // created via User Management
-      || userData.value?.role                            // created via Register form
-      || 'No Role Assigned'                              // fallback
+  return userData.value?.user_role
+      || userData.value?.role
+      || 'No Role Assigned'
 })
   // Reset State Action
   function $reset() {
