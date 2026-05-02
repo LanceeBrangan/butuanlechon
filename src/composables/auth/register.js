@@ -40,6 +40,8 @@ export function useRegister() {
         data: {
           firstname: formData.value.firstname,
           lastname: formData.value.lastname,
+          is_admin: false
+          //role: 'Administrator'
         }
       }
     })
