@@ -9,14 +9,14 @@ export const useAuthUserStore = defineStore('authUser', () => {
   const authBranchIds = ref([])
 
   // Getters
-  // FIXED: Changed 'user_role' to 'role' to match your registration data
-  const userRole = computed(() => {
-    if (userData.value?.is_admin) return 'Super Administrator'
 
-    // Check for 'role' (from your register function)
-    return userData.value.role || 'No Role Assigned'
-  })
-
+const userRole = computed(() => {
+  if (!userData.value) return 'No Role Assigned'        // guard against null
+  if (userData.value?.is_admin) return 'Super Administrator'
+  return userData.value?.user_role                       // created via User Management
+      || userData.value?.role                            // created via Register form
+      || 'No Role Assigned'                              // fallback
+})
   // Reset State Action
   function $reset() {
     userData.value = null

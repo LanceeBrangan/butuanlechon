@@ -1,5 +1,5 @@
 // stores/users.js
-import { supabaseAdmin } from '@/utils/supabaseAdmin'
+import { supabaseAdmin } from '@/utils/supabase'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
@@ -7,8 +7,12 @@ export const useUsersStore = defineStore('users', () => {
   const usersTable = ref([])
   const usersTotal = ref(0)
 
-  // Fetch paginated users for the table
-  const getUsersTable = async ({ page, itemsPerPage }) => {
+  function $reset() {
+    usersTable.value = []
+    usersTotal.value = 0
+  }
+
+  async function getUsersTable({ page, itemsPerPage }) {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({
       page: page,
       perPage: itemsPerPage,
@@ -21,58 +25,51 @@ export const useUsersStore = defineStore('users', () => {
     return { data }
   }
 
-  // Add user — Super Admin creates user with full metadata
-  const addUser = async (formData) => {
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+  async function addUser(formData) {
+    return await supabaseAdmin.auth.admin.createUser({
       email: formData.email,
       password: formData.password,
-      email_confirm: true, // skip email confirmation
+      email_confirm: true,
       user_metadata: {
         firstname: formData.firstname,
-        middlename: formData.middlename,
+        middlename: formData.middlename ?? '',
         lastname: formData.lastname,
         phone: formData.phone,
-        branch: Array.isArray(formData.branch) ? formData.branch.join(',') : formData.branch,
+        branch: Array.isArray(formData.branch)
+          ? formData.branch.join(',')
+          : formData.branch ?? '',
         user_role: formData.user_role,
         is_admin: formData.user_role === 'Super Administrator',
       },
     })
-
-    return { data, error }
   }
 
-  // Update user metadata (and optionally password)
-  const updateUser = async (formData) => {
-    const updatePayload = {
+  async function updateUser(formData) {
+    const payload = {
       user_metadata: {
         firstname: formData.firstname,
-        middlename: formData.middlename,
+        middlename: formData.middlename ?? '',
         lastname: formData.lastname,
         phone: formData.phone,
-        branch: Array.isArray(formData.branch) ? formData.branch.join(',') : formData.branch,
+        branch: Array.isArray(formData.branch)
+          ? formData.branch.join(',')
+          : formData.branch ?? '',
         user_role: formData.user_role,
         is_admin: formData.user_role === 'Super Administrator',
       },
     }
 
-    // Only update password if provided
-    if (formData.password) {
-      updatePayload.password = formData.password
-    }
+    if (formData.password) payload.password = formData.password
 
-    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
-      formData.id,
-      updatePayload
-    )
-
-    return { data, error }
+    return await supabaseAdmin.auth.admin.updateUserById(formData.id, payload)
   }
 
-  // Delete user
-  const deleteUser = async (userId) => {
-    const { data, error } = await supabaseAdmin.auth.admin.deleteUser(userId)
-    return { data, error }
+  async function deleteUser(userId) {
+    return await supabaseAdmin.auth.admin.deleteUser(userId)
   }
 
-  return { usersTable, usersTotal, getUsersTable, addUser, updateUser, deleteUser }
+  return {
+    usersTable, usersTotal,
+    $reset, getUsersTable, addUser, updateUser, deleteUser,
+  }
 })
