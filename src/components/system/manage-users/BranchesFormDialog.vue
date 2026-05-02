@@ -93,6 +93,8 @@ const onFormReset = () => {
     :model-value="props.isDialogVisible"
     :fullscreen="mdAndDown"
     persistent
+    scrollable
+    @update:model-value="(val) => !val && emit('update:isDialogVisible', false)"
   >
     <v-card prepend-icon="mdi-store" title="Branch Information">
       <AlertNotification

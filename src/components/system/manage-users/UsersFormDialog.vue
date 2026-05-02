@@ -111,6 +111,8 @@ onMounted(async () => {
     :model-value="props.isDialogVisible"
     :fullscreen="mdAndDown"
     persistent
+    scrollable
+    @update:model-value="(val) => !val && emit('update:isDialogVisible', false)"
   >
     <v-card prepend-icon="mdi-account" title="User Information">
       <AlertNotification
@@ -145,7 +147,7 @@ onMounted(async () => {
               <v-autocomplete
                 v-model="formData.user_role"
                 label="User Role"
-                :items="userRolesStore.userRoles"
+                :items="userRolesStore.userRoles || []"
                 item-title="user_role"
                 item-value="user_role"
                 clearable
@@ -157,7 +159,7 @@ onMounted(async () => {
               <v-autocomplete
                 v-model="formData.branch"
                 label="Branch"
-                :items="branchesStore.branches"
+                :items="branchesStore.branches || []"
                 item-title="name"
                 item-value="name"
                 clearable
