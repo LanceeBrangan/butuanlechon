@@ -1,5 +1,4 @@
-// stores/branches.js
-import { supabaseAdmin, tablePagination, tableSearch } from '@/utils/supabase'
+import { supabase, supabaseAdmin, tablePagination, tableSearch } from '@/utils/supabase'
 import { useAuthUserStore } from './authUser'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
@@ -11,6 +10,10 @@ export const useBranchesStore = defineStore('branches', () => {
   const branches = ref([])
   const branchesTotal = ref(0)
 
+  // ✅ Use supabaseAdmin for Super Admin, supabase for regular users
+  const getClient = () =>
+    authStore.userRole === 'Super Administrator' ? supabaseAdmin : supabase
+
   function $reset() {
     branchesTable.value = []
     branches.value = []
@@ -18,24 +21,19 @@ export const useBranchesStore = defineStore('branches', () => {
   }
 
   async function getBranches() {
-    const { data } = await supabaseAdmin
+    const { data } = await getClient()
       .from('branches')
       .select()
       .order('name', { ascending: true })
 
-    if (authStore.userRole === 'Super Administrator') {
-      branches.value = data
-    } else {
-      const authBranches = authStore.userData?.branch?.split(',') ?? []
-      branches.value = data.filter((b) => authBranches.includes(b.name))
-    }
+    branches.value = data ?? []
   }
 
   async function getBranchesTable(tableOptions, { search }) {
     const { rangeStart, rangeEnd, column, order } = tablePagination(tableOptions, 'name')
     search = tableSearch(search)
 
-    const { data } = await supabaseAdmin
+    const { data } = await getClient()
       .from('branches')
       .select()
       .or('name.ilike.%' + search + '%, address.ilike.%' + search + '%')
@@ -43,19 +41,18 @@ export const useBranchesStore = defineStore('branches', () => {
       .range(rangeStart, rangeEnd)
 
     const { count } = await getBranchesCount({ search })
-
-    branchesTable.value = data
+    branchesTable.value = data ?? []
     branchesTotal.value = count
   }
 
   async function getBranchesCount({ search }) {
-    return await supabaseAdmin
+    return await getClient()
       .from('branches')
       .select('*', { count: 'exact', head: true })
       .or('name.ilike.%' + search + '%, address.ilike.%' + search + '%')
   }
 
-  // ✅ These were missing — added here
+  // Writes are always Super Admin only — always use supabaseAdmin
   async function addBranch(formData) {
     return await supabaseAdmin.from('branches').insert([formData]).select()
   }
