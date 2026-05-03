@@ -1,59 +1,47 @@
 import { ref, computed } from 'vue'
-import { supabase } from '@/utils/supabase'
+import { supabase, supabaseAdmin } from '@/utils/supabase'
+import { useAuthUserStore } from '@/stores/authUser'
 
 /* ================= GLOBAL STATE ================= */
-
 const products = ref([])
-
-// SIMULATED DATE - para testable ang end of day
 const currentSimulatedDate = ref(new Date().toISOString().split('T')[0])
-
-// date helper - uses simulated date
 const todayKey = () => currentSimulatedDate.value
-
-// daily reports
 const dailyReports = ref({})
 
 const getTodayReport = () => {
   const date = todayKey()
   if (!dailyReports.value[date]) {
-    dailyReports.value[date] = {
-      sales: 0,
-      expenses: 0,
-    }
+    dailyReports.value[date] = { sales: 0, expenses: 0 }
   }
   return dailyReports.value[date]
 }
 
 /* ================= COMPUTED ================= */
-
 const lowStockProducts = computed(() => products.value.filter((p) => p.quantity <= 10))
-
 const todayReport = computed(() => getTodayReport())
-
 const profitToday = computed(() => todayReport.value.sales - todayReport.value.expenses)
-
 const todayProducts = computed(() => {
   const today = todayKey()
   return products.value.filter((p) => p.purchaseDate === today)
 })
 
 /* ================= COMPOSABLE ================= */
-
 export function useProducts() {
-  /* ===== PRODUCTS ===== */
+  const authStore = useAuthUserStore()
 
-  // Fetch all inventory from Supabase
+  // ✅ Role-based client
+  const getClient = () =>
+    authStore.userRole === 'Super Administrator' ? supabaseAdmin : supabase
+
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getClient()
         .from('inventory')
         .select('*')
         .order('item_name', { ascending: true })
 
       if (error) throw error
 
-      // Map Supabase columns to local product structure
       const mappedData = (data || []).map((item) => ({
         id: item.inv_id,
         name: item.item_name,
@@ -78,22 +66,20 @@ export function useProducts() {
       const purchaseDate = customDate || todayKey()
       const totalPrice = product.totalPrice || product.quantity * product.price
 
-      const { data, error } = await supabase
+      // ✅ Inventory inserts always use supabaseAdmin
+      const { data, error } = await supabaseAdmin
         .from('inventory')
-        .insert([
-          {
-            item_name: product.name,
-            quantity: product.quantity,
-            unit: product.unit || 'piece(s)',
-            price: product.price,
-            purchase_date: purchaseDate,
-          },
-        ])
+        .insert([{
+          item_name: product.name,
+          quantity: product.quantity,
+          unit: product.unit || 'piece(s)',
+          price: product.price,
+          purchase_date: purchaseDate,
+        }])
         .select()
 
       if (error) throw error
 
-      // Add to local state
       if (data && data.length > 0) {
         const newProduct = {
           id: data[0].inv_id,
@@ -107,7 +93,6 @@ export function useProducts() {
         }
         products.value.push(newProduct)
 
-        // Add expenses to the SPECIFIC date's report
         if (!dailyReports.value[purchaseDate]) {
           dailyReports.value[purchaseDate] = { sales: 0, expenses: 0 }
         }
@@ -123,11 +108,9 @@ export function useProducts() {
   const updateProduct = async (updated) => {
     try {
       const oldProduct = products.value.find((p) => p.id === updated.id)
-
       const newTotalPrice = updated.totalPrice || updated.quantity * updated.price
 
-      // Update in Supabase
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('inventory')
         .update({
           item_name: updated.name,
@@ -140,39 +123,24 @@ export function useProducts() {
 
       if (error) throw error
 
-      // Update local state
       const index = products.value.findIndex((p) => p.id === updated.id)
       if (index !== -1) {
-        // ✅ FIXED: Update expenses on the PURCHASE DATE, not today
         if (oldProduct && oldProduct.purchaseDate) {
           const purchaseDate = oldProduct.purchaseDate
-
-          // Initialize report for that date if it doesn't exist
           if (!dailyReports.value[purchaseDate]) {
             dailyReports.value[purchaseDate] = { sales: 0, expenses: 0 }
           }
-
           const report = dailyReports.value[purchaseDate]
           report.expenses -= oldProduct.totalPrice
           report.expenses += newTotalPrice
         }
 
-        // ✅ NEW: Handle additional expense for TODAY if this is a stock update
         if (updated._additionalExpense && updated._addedOnDate) {
           const addedOnDate = updated._addedOnDate
-
-          // Initialize report for today if it doesn't exist
           if (!dailyReports.value[addedOnDate]) {
             dailyReports.value[addedOnDate] = { sales: 0, expenses: 0 }
           }
-
-          // Add only the ADDITIONAL expense to today
-          const todayReport = dailyReports.value[addedOnDate]
-          todayReport.expenses += updated._additionalExpense
-
-          console.log(
-            `Added ₱${updated._additionalExpense} to ${addedOnDate} expenses (stock update)`,
-          )
+          dailyReports.value[addedOnDate].expenses += updated._additionalExpense
         }
 
         products.value[index] = {
@@ -192,20 +160,14 @@ export function useProducts() {
     try {
       const product = products.value.find((p) => p.id === id)
 
-      // Delete from Supabase
-      const { error } = await supabase.from('inventory').delete().eq('inv_id', id)
-
+      const { error } = await supabaseAdmin.from('inventory').delete().eq('inv_id', id)
       if (error) throw error
 
-      // FIXED: Update expenses on the PURCHASE DATE, not today
       if (product && product.purchaseDate) {
-        // Initialize report for that date if it doesn't exist
         if (!dailyReports.value[product.purchaseDate]) {
           dailyReports.value[product.purchaseDate] = { sales: 0, expenses: 0 }
         }
-
-        const report = dailyReports.value[product.purchaseDate]
-        report.expenses -= product.totalPrice
+        dailyReports.value[product.purchaseDate].expenses -= product.totalPrice
       }
 
       products.value = products.value.filter((p) => p.id !== id)
@@ -221,18 +183,15 @@ export function useProducts() {
 
       const newQuantity = Math.max(0, product.quantity - qty)
 
-      // Update in Supabase
-      const { data, error } = await supabase
+      // ✅ Staff can deduct — use role-based client
+      const { data, error } = await getClient()
         .from('inventory')
         .update({ quantity: newQuantity })
         .eq('inv_id', productId)
         .select()
 
       if (error) throw error
-
-      // Update local state
       product.quantity = newQuantity
-
       return data
     } catch (error) {
       console.error('Error deducting product:', error)
@@ -243,76 +202,50 @@ export function useProducts() {
     try {
       for (const u of usageArray) {
         const product = products.value.find((p) => p.id === u.productId)
-        if (product && u.quantity > 0) {
-          await deductProduct(u.productId, u.quantity)
-        }
+        if (product && u.quantity > 0) await deductProduct(u.productId, u.quantity)
       }
     } catch (error) {
       console.error('Error deducting multiple products:', error)
     }
   }
 
-  /* ===== SALES ===== */
-
   const setTodaySales = (amount) => {
     const report = getTodayReport()
     report.sales = Number(amount) || 0
   }
 
-  /* ===== DATE MANAGEMENT ===== */
-
   const setBusinessDate = (newDate) => {
     currentSimulatedDate.value = newDate
   }
-
-  /* ===== END DAY / REPORTS ===== */
 
   const saveDailyReport = async () => {
     const today = todayKey()
     const report = getTodayReport()
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('daily_reports')
-        .insert([
-          {
-            report_date: today,
-            sales: report.sales,
-            expenses: report.expenses,
-            profit: report.sales - report.expenses,
-          },
-        ])
+        .insert([{
+          report_date: today,
+          sales: report.sales,
+          expenses: report.expenses,
+          profit: report.sales - report.expenses,
+        }])
         .select()
 
       if (error) throw error
-
-      console.log('Daily report saved successfully:', data)
       return data
     } catch (error) {
       console.error('Error saving daily report:', error)
-      // Continue even if save fails - don't block the day advancement
     }
   }
 
   const endDay = async () => {
     const today = todayKey()
-
-    console.log('=== DAY ENDED ===')
-    console.log('Date:', today)
-    console.log('Sales:', todayReport.value.sales)
-    console.log('Expenses:', todayReport.value.expenses)
-    console.log('Profit:', profitToday.value)
-
-    // Save the daily report to database
     await saveDailyReport()
-
-    // Advance to next day
     const nextDate = new Date(today)
     nextDate.setDate(nextDate.getDate() + 1)
     currentSimulatedDate.value = nextDate.toISOString().split('T')[0]
-
-    console.log('New date:', currentSimulatedDate.value)
-    console.log('================')
   }
 
   const allReports = computed(() => {
@@ -327,31 +260,10 @@ export function useProducts() {
   })
 
   return {
-    // state
-    products,
-    lowStockProducts,
-    currentSimulatedDate, // expose para makita sa UI
-
-    // product actions
-    fetchProducts,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-
-    // date management
-    setBusinessDate,
-
-    // deduct
-    deductProduct,
-    deductMultipleProducts,
-
-    // reports
-    todayReport,
-    profitToday,
-    todayProducts,
-    setTodaySales,
-    dailyReports,
-    allReports,
-    endDay,
+    products, lowStockProducts, currentSimulatedDate,
+    fetchProducts, addProduct, updateProduct, deleteProduct,
+    setBusinessDate, deductProduct, deductMultipleProducts,
+    todayReport, profitToday, todayProducts,
+    setTodaySales, dailyReports, allReports, endDay,
   }
 }
