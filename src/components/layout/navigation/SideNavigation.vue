@@ -13,13 +13,10 @@ import { useDisplay } from 'vuetify'
 
 const props = defineProps(['isDrawerVisible'])
 
-// Utilize pre-defined vue functions
 const { mobile } = useDisplay()
-
-// Use Pinia Store
 const authStore = useAuthUserStore()
 
-// Load Variables
+const isMounted = ref(false)  // ✅ add this
 const noAccessPages = ref([])
 const editableMenuItemsNav1 = ref([...menuItemsNav1])
 const editableMenuItemsNav2 = ref([...menuItemsNav2])
@@ -27,7 +24,6 @@ const editableMenuItemsNav3 = ref([...menuItemsNav3])
 const editableMenuItemsNav4 = ref([...menuItemsNav4])
 const editableMenuItemsNav5 = ref([...menuItemsNav5])
 
-// Filter pages base on role
 const onFilterPages = () => {
   if (authStore.userRole === 'Super Administrator') return
 
@@ -45,20 +41,17 @@ const onFilterPages = () => {
   })
 }
 
-// Load Functions during component rendering
 onMounted(() => {
   onFilterPages()
+  isMounted.value = true  // ✅ set after filter runs
 })
 </script>
 
 <template>
-  <v-navigation-drawer
-    permanent
-    width="300"
-    expand-on-hover
-    rail
-  >
-    <v-list density="compact" nav>
+  <v-navigation-drawer permanent width="300" expand-on-hover rail>
+
+    <!-- ✅ Only render the list after mount to avoid slot timing issues -->
+    <v-list v-if="isMounted" density="compact" nav>
       <v-list-item
         prepend-icon="mdi-view-dashboard"
         title="Dashboard"
@@ -67,66 +60,69 @@ onMounted(() => {
 
       <v-divider></v-divider>
 
-      <v-list-group :key="i" v-for="([title, icon], i) in mainNav" fluid v-if="!noAccessPages.includes(title)">
-        <template #activator="{ props }">
-          <v-list-item v-bind="props" :prepend-icon="icon" :title="title"></v-list-item>
-        </template>
+      <!-- ✅ Separate v-if from v-for using <template> -->
+      <template v-for="([title, icon], i) in mainNav" :key="i">
+        <v-list-group v-if="!noAccessPages.includes(title)" fluid>
+          <template #activator="{ props }">
+            <v-list-item v-bind="props" :prepend-icon="icon" :title="title"></v-list-item>
+          </template>
 
-        <template v-if="title === mainNav[0][0]">
-          <v-list-item
-            v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav1"
-            :key="i"
-            :prepend-icon="icon"
-            :title="title"
-            :subtitle="subtitle ?? undefined"
-            :to="to ?? undefined"
-          ></v-list-item>
-        </template>
+          <template v-if="title === mainNav[0][0]">
+            <v-list-item
+              v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav1"
+              :key="i"
+              :prepend-icon="icon"
+              :title="title"
+              :subtitle="subtitle ?? undefined"
+              :to="to ?? undefined"
+            ></v-list-item>
+          </template>
 
-        <template v-if="title === mainNav[1][0]">
-          <v-list-item
-            v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav2"
-            :key="i"
-            :prepend-icon="icon"
-            :title="title"
-            :subtitle="subtitle ?? undefined"
-            :to="to ?? undefined"
-          ></v-list-item>
-        </template>
+          <template v-if="title === mainNav[1][0]">
+            <v-list-item
+              v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav2"
+              :key="i"
+              :prepend-icon="icon"
+              :title="title"
+              :subtitle="subtitle ?? undefined"
+              :to="to ?? undefined"
+            ></v-list-item>
+          </template>
 
-        <template v-if="title === mainNav[2][0]">
-          <v-list-item
-            v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav3"
-            :key="i"
-            :prepend-icon="icon"
-            :title="title"
-            :subtitle="subtitle ?? undefined"
-            :to="to ?? undefined"
-          ></v-list-item>
-        </template>
+          <template v-if="title === mainNav[2][0]">
+            <v-list-item
+              v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav3"
+              :key="i"
+              :prepend-icon="icon"
+              :title="title"
+              :subtitle="subtitle ?? undefined"
+              :to="to ?? undefined"
+            ></v-list-item>
+          </template>
 
-        <template v-if="title === mainNav[3][0]">
-          <v-list-item
-            v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav4"
-            :key="i"
-            :prepend-icon="icon"
-            :title="title"
-            :subtitle="subtitle ?? undefined"
-            :to="to ?? undefined"
-          ></v-list-item>
-        </template>
+          <template v-if="title === mainNav[3][0]">
+            <v-list-item
+              v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav4"
+              :key="i"
+              :prepend-icon="icon"
+              :title="title"
+              :subtitle="subtitle ?? undefined"
+              :to="to ?? undefined"
+            ></v-list-item>
+          </template>
 
-        <template v-if="title === mainNav[4][0]">
-          <v-list-item
-            v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav5"
-            :key="i"
-            :prepend-icon="icon"
-            :title="title"
-            :subtitle="subtitle ?? undefined"
-            :to="to ?? undefined"
-          ></v-list-item>
-        </template>
-      </v-list-group>
+          <template v-if="title === mainNav[4][0]">
+            <v-list-item
+              v-for="([title, icon, subtitle, to], i) in editableMenuItemsNav5"
+              :key="i"
+              :prepend-icon="icon"
+              :title="title"
+              :subtitle="subtitle ?? undefined"
+              :to="to ?? undefined"
+            ></v-list-item>
+          </template>
+        </v-list-group>
+      </template>
 
       <v-divider></v-divider>
 
@@ -136,5 +132,6 @@ onMounted(() => {
         to="/account/settings"
       ></v-list-item>
     </v-list>
+
   </v-navigation-drawer>
 </template>

@@ -3,6 +3,8 @@ import { RouterView, useRoute } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { computed } from 'vue'
 
+
+
 const route = useRoute()
 
 // Show AppLayout only for authenticated routes

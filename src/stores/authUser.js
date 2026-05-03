@@ -1,4 +1,4 @@
-import { supabase } from '@/utils/supabase'
+import { supabase, supabaseAdmin } from '@/utils/supabase'
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
@@ -52,18 +52,19 @@ const userRole = computed(() => {
   }
 
   // Retrieve User Roles Pages
-  async function getAuthPages(name) {
-    if (!name) return // Safety check
 
-    const { data } = await supabase
-      .from('user_roles')
-      .select('*, pages: user_role_pages (page)')
-      .eq('user_role', name) // Ensure your DB column is actually named 'user_role'
+async function getAuthPages(name) {
+  if (!name) return
 
-    if (data && data.length > 0 && data[0].pages) {
-      authPages.value = data[0].pages.map((p) => p.page)
-    }
+  const { data } = await supabaseAdmin        // ← changed
+    .from('user_roles')
+    .select('*, pages: user_role_pages (page)')
+    .eq('user_role', name)
+
+  if (data && data.length > 0 && data[0].pages) {
+    authPages.value = data[0].pages.map((p) => p.page)
   }
+}
 
   // Retrieve Branch Ids
   async function getAuthBranchIds() {
