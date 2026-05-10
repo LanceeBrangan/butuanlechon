@@ -22,6 +22,9 @@ import ProductView from '@/views/ProductView.vue'
 //Expenses
 import DailyUsage from '@/views/DailyUsage.vue'
 
+//Stock
+import StockView from '@/views/Reports/StockView.vue'
+import SalesSummaryView from '@/views/Reports/SalesSummaryView.vue'
 const isDefaced = false
 
 //Routes
@@ -43,6 +46,7 @@ export const routes = isDefaced
         component: ForbiddenView,
         meta: { requiresAuth: true, isDefault: true },
       },
+
       //Error Pages
       {
         path: '/forbidden',
@@ -143,4 +147,20 @@ export const routes = isDefaced
         component: NotFoundView,
         meta: { isDefault: true },
       },
+
+      //Stock
+      {
+        path: '/reports/stocks',
+        name: 'low-stock',
+        component: StockView,
+        meta: { requiresAuth: true },
+      },
+
+      {
+        path: '/reports/summary',
+        name: 'sales-summary',
+        component: SalesSummaryView,
+        meta: { requiresAuth: true },
+      },
+      //Stock
     ]

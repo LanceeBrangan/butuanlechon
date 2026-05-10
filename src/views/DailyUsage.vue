@@ -1,6 +1,6 @@
 <script setup>
 import { reactive, ref } from 'vue'
-import { useProducts } from '@/composables/useProducts'
+import { useProducts } from '@/composables/products/index.js'
 
 const { products, lowStockProducts, deductMultipleProducts } = useProducts()
 

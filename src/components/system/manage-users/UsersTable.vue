@@ -33,9 +33,7 @@ const formAction = ref({
 
 // Trigger Update Btn
 const onUpdate = (item) => {
-  const { id, email, phone, user_metadata } = item
-
-  itemData.value = { id, email, phone, ...user_metadata }
+  itemData.value = { id: item.id, email: item.email, ...item.user_metadata }
   isDialogVisible.value = true
 }
 

@@ -68,14 +68,7 @@ const drawerItems = computed(() => [
 
 <template>
   <template v-if="isVisible">
-    <v-app-bar elevation="1" color="red-darken-3" class="app">
-      <!-- Logo -->
-      <v-app-bar-title class="title" :class="{ 'text-subtitle-1': isCompact }">
-        BL & SG Administrative Panel
-      </v-app-bar-title>
-
-
-      <!-- Profile Menu -->
+    <!-- Profile Menu -->
       <v-menu min-width="280px" rounded offset="5" transition="scale-transition">
         <template #activator="{ props }">
           <v-btn icon v-bind="props" class="profile-btn">
@@ -151,21 +144,6 @@ const drawerItems = computed(() => [
           </v-card-text>
         </v-card>
       </v-menu>
-    </v-app-bar>
-
-    <!-- Mobile Navigation Drawer -->
-    <v-navigation-drawer v-model="mobileDrawer" temporary location="left" v-if="!showNavigation">
-      <v-list>
-        <v-list-item
-          v-for="item in drawerItems"
-          :key="item.title"
-          :to="item.to"
-          :prepend-icon="item.icon"
-          :title="item.title"
-          @click="item.action ? item.action() : null"
-        ></v-list-item>
-      </v-list>
-    </v-navigation-drawer>
   </template>
 </template>
 

@@ -47,7 +47,7 @@ watch(
   () => {
     isUpdate.value = props.itemData ? true : false
     formData.value = props.itemData
-      ? { ...props.itemData, branch: props.itemData.branch.split(',') }
+      ? { ...props.itemData, branch: props.itemData.branch ? props.itemData.branch.split(',') : [] }
       : { ...formDataDefault }
   },
 )
@@ -111,6 +111,8 @@ onMounted(async () => {
     :model-value="props.isDialogVisible"
     :fullscreen="mdAndDown"
     persistent
+    scrollable
+    @update:model-value="(val) => !val && emit('update:isDialogVisible', false)"
   >
     <v-card prepend-icon="mdi-account" title="User Information">
       <AlertNotification
@@ -145,7 +147,7 @@ onMounted(async () => {
               <v-autocomplete
                 v-model="formData.user_role"
                 label="User Role"
-                :items="userRolesStore.userRoles"
+                :items="userRolesStore.userRoles || []"
                 item-title="user_role"
                 item-value="user_role"
                 clearable
@@ -157,7 +159,7 @@ onMounted(async () => {
               <v-autocomplete
                 v-model="formData.branch"
                 label="Branch"
-                :items="branchesStore.branches"
+                :items="branchesStore.branches || []"
                 item-title="name"
                 item-value="name"
                 clearable
@@ -190,11 +192,13 @@ onMounted(async () => {
             <v-col cols="12">
               <v-text-field
                 v-model="formData.password"
-                label="Password"
+                :label="isUpdate ? 'Password (optional)' : 'Password'"
                 :type="isPasswordVisible ? 'text' : 'password'"
                 :append-inner-icon="isPasswordVisible ? 'mdi-eye-off' : 'mdi-eye'"
                 @click:append-inner="isPasswordVisible = !isPasswordVisible"
-                :rules="[requiredValidator, passwordValidator]"
+                :rules="isUpdate
+                  ? formData.password ? [passwordValidator] : []
+                  : [requiredValidator, passwordValidator]"
               ></v-text-field>
             </v-col>
           </v-row>

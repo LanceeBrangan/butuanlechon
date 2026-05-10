@@ -24,8 +24,6 @@ const handleRegistrationSuccess = (email) => {
   // Dialog handles redirect after user closes it
 }
 
-//Define the available roles
-const availableRoles = ['Staff']
 </script>
 
 <template>
@@ -54,18 +52,6 @@ const availableRoles = ['Staff']
         required
         variant="outlined"
       />
-
-      <v-select
-        v-model="formData.role"
-        :items="availableRoles"
-        label="Role"
-        prepend-inner-icon="mdi-account-tag"
-        :rules="[requiredValidator]"
-        required
-        variant="outlined"
-      >
-      </v-select>
-
       <v-text-field
         v-model="formData.email"
         label="Email"
