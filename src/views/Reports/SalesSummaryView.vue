@@ -3,6 +3,12 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProducts } from '@/composables/products/index.js'
 import Chart from 'chart.js/auto'
+import {
+  exportDailyExcel,
+  exportMonthlyExcel,
+  exportMonthlyDetailExcel,
+  exportFullReportExcel,
+} from './useExcelExport.js'
 
 const router = useRouter()
 const { products, allReports, lowStockProducts, fetchProducts } = useProducts()
@@ -12,6 +18,7 @@ onMounted(async () => {
   await nextTick()
   buildBarChart()
   buildDonutChart()
+  buildMonthlyChart()
 })
 
 // ── Computed summaries ──
@@ -23,32 +30,62 @@ const bestDay = computed(() => {
   return allReports.value.reduce((a, b) => (a.profit > b.profit ? a : b))
 })
 
-// Last 7 reports for the bar chart
 const recentReports = computed(() => [...allReports.value].slice(0, 7).reverse())
 
-// Top products by totalPrice (most expensive / most stocked value)
 const topProducts = computed(() =>
   [...products.value].sort((a, b) => b.totalPrice - a.totalPrice).slice(0, 6),
 )
 
+// ── Monthly Reports ──
+const selectedMonth = ref(new Date().toISOString().slice(0, 7))
+
+const monthlyReports = computed(() => {
+  const grouped = {}
+  allReports.value.forEach((r) => {
+    const month = r.date.slice(0, 7)
+    if (!grouped[month]) grouped[month] = { sales: 0, expenses: 0, profit: 0, days: 0 }
+    grouped[month].sales += r.sales
+    grouped[month].expenses += r.expenses
+    grouped[month].profit += r.profit
+    grouped[month].days += 1
+  })
+  return Object.entries(grouped)
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([month, data]) => ({ month, ...data }))
+})
+
+const availableMonths = computed(() =>
+  monthlyReports.value.map((m) => ({
+    title: formatMonth(m.month),
+    value: m.month,
+  })),
+)
+
+const filteredDailyReports = computed(() =>
+  allReports.value.filter((r) => r.date.startsWith(selectedMonth.value)),
+)
+
+const selectedMonthSummary = computed(() => {
+  const found = monthlyReports.value.find((m) => m.month === selectedMonth.value)
+  return found || { sales: 0, expenses: 0, profit: 0, days: 0 }
+})
+
 // ── Charts ──
 let barChart = null
 let donutChart = null
+let monthlyChart = null
 
 const buildBarChart = () => {
   const ctx = document.getElementById('salesBarChart')
   if (!ctx) return
   if (barChart) barChart.destroy()
-
-  const labels = recentReports.value.map((r) => {
-    const d = new Date(r.date)
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  })
-
   barChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels,
+      labels: recentReports.value.map((r) => {
+        const d = new Date(r.date)
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      }),
       datasets: [
         {
           label: 'Sales',
@@ -92,25 +129,15 @@ const buildBarChart = () => {
             padding: 20,
           },
         },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => ` ₱${ctx.parsed.y.toLocaleString()}`,
-          },
-        },
+        tooltip: { callbacks: { label: (ctx) => ` ₱${ctx.parsed.y.toLocaleString()}` } },
       },
       scales: {
         y: {
           beginAtZero: true,
           grid: { color: 'rgba(0,0,0,0.05)' },
-          ticks: {
-            callback: (v) => '₱' + v.toLocaleString(),
-            font: { size: 11 },
-          },
+          ticks: { callback: (v) => '₱' + v.toLocaleString(), font: { size: 11 } },
         },
-        x: {
-          grid: { display: false },
-          ticks: { font: { size: 11, weight: '600' } },
-        },
+        x: { grid: { display: false }, ticks: { font: { size: 11, weight: '600' } } },
       },
     },
   })
@@ -120,10 +147,8 @@ const buildDonutChart = () => {
   const ctx = document.getElementById('profitDonut')
   if (!ctx) return
   if (donutChart) donutChart.destroy()
-
   const profitable = allReports.value.filter((r) => r.profit > 0).length
   const losing = allReports.value.filter((r) => r.profit <= 0).length
-
   donutChart = new Chart(ctx, {
     type: 'doughnut',
     data: {
@@ -144,12 +169,71 @@ const buildDonutChart = () => {
       plugins: {
         legend: {
           position: 'bottom',
+          labels: { font: { size: 12, weight: '600' }, usePointStyle: true, padding: 16 },
+        },
+      },
+    },
+  })
+}
+
+const buildMonthlyChart = () => {
+  const ctx = document.getElementById('monthlyBarChart')
+  if (!ctx) return
+  if (monthlyChart) monthlyChart.destroy()
+  const data = [...monthlyReports.value].reverse()
+  monthlyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map((m) => formatMonth(m.month)),
+      datasets: [
+        {
+          label: 'Sales',
+          data: data.map((m) => m.sales),
+          backgroundColor: 'rgba(46,125,50,0.75)',
+          borderColor: 'rgba(46,125,50,1)',
+          borderWidth: 2,
+          borderRadius: 7,
+        },
+        {
+          label: 'Expenses',
+          data: data.map((m) => m.expenses),
+          backgroundColor: 'rgba(198,40,40,0.75)',
+          borderColor: 'rgba(198,40,40,1)',
+          borderWidth: 2,
+          borderRadius: 7,
+        },
+        {
+          label: 'Profit',
+          data: data.map((m) => m.profit),
+          backgroundColor: 'rgba(21,101,192,0.75)',
+          borderColor: 'rgba(21,101,192,1)',
+          borderWidth: 2,
+          borderRadius: 7,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'top',
           labels: {
             font: { size: 12, weight: '600' },
             usePointStyle: true,
-            padding: 16,
+            pointStyle: 'rectRounded',
+            padding: 20,
           },
         },
+        tooltip: { callbacks: { label: (ctx) => ` ₱${ctx.parsed.y.toLocaleString()}` } },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.05)' },
+          ticks: { callback: (v) => '₱' + v.toLocaleString(), font: { size: 11 } },
+        },
+        x: { grid: { display: false }, ticks: { font: { size: 11, weight: '600' } } },
       },
     },
   })
@@ -161,13 +245,32 @@ watch(
     await nextTick()
     buildBarChart()
     buildDonutChart()
+    buildMonthlyChart()
   },
   { deep: true },
 )
 
+watch(selectedMonth, async () => {
+  await nextTick()
+})
+
+// ── Helpers ──
 const profitColor = (val) => (val >= 0 ? '#2e7d32' : '#c62828')
 const formatDate = (d) =>
   new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+const formatMonth = (m) => {
+  const [year, month] = m.split('-')
+  return new Date(year, month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
+
+// ── Export ──
+const exportDailyCSV = () => exportDailyExcel(allReports.value)
+const exportMonthlyCSV = () => exportMonthlyExcel(allReports.value)
+const exportMonthlyDetailCSV = () => exportMonthlyDetailExcel(allReports.value, selectedMonth.value)
+const exportFullReport = () => exportFullReportExcel(allReports.value, products.value)
+
+// Active tab
+const activeTab = ref('daily')
 </script>
 
 <template>
@@ -187,11 +290,34 @@ const formatDate = (d) =>
             <h1 class="top-title">Sales Summary</h1>
           </div>
         </div>
-        <div class="date-badge">
-          <v-icon size="14" class="mr-1" style="color: #8b0000">mdi-calendar-month</v-icon>
-          <span class="date-badge-text"
-            >{{ allReports.length }} day{{ allReports.length !== 1 ? 's' : '' }} recorded</span
+        <div class="d-flex align-center ga-3 flex-wrap">
+          <!-- Export Buttons -->
+          <v-btn
+            variant="flat"
+            size="small"
+            rounded="lg"
+            class="export-btn-daily"
+            @click="exportDailyCSV"
           >
+            <v-icon start size="16">mdi-download</v-icon>
+            Export Daily
+          </v-btn>
+          <v-btn
+            variant="flat"
+            size="small"
+            rounded="lg"
+            class="export-btn-monthly"
+            @click="exportMonthlyCSV"
+          >
+            <v-icon start size="16">mdi-download</v-icon>
+            Export Monthly
+          </v-btn>
+          <div class="date-badge">
+            <v-icon size="14" class="mr-1" style="color: #8b0000">mdi-calendar-month</v-icon>
+            <span class="date-badge-text"
+              >{{ allReports.length }} day{{ allReports.length !== 1 ? 's' : '' }} recorded</span
+            >
+          </div>
         </div>
       </div>
 
@@ -241,214 +367,471 @@ const formatDate = (d) =>
         </v-col>
       </v-row>
 
-      <!-- ── Main Grid ── -->
-      <v-row dense>
-        <!-- Left: Bar Chart + Reports Table -->
-        <v-col cols="12" lg="8">
-          <!-- Bar Chart -->
-          <div class="section-card mb-5">
-            <div class="section-card-header">
-              <div class="d-flex align-center ga-2">
-                <v-icon size="18" color="#8b0000">mdi-chart-bar</v-icon>
-                <span class="section-card-title">Daily Sales vs Expenses vs Profit</span>
-              </div>
-              <span class="section-card-sub">Last {{ recentReports.length }} days</span>
-            </div>
-            <div class="section-card-body">
-              <div v-if="recentReports.length === 0" class="empty-chart">
-                <v-icon size="42" color="grey-lighten-2" class="mb-2">mdi-chart-bar-stacked</v-icon>
-                <p class="empty-chart-text">
-                  No daily reports yet. End a day from the Dashboard to generate data.
-                </p>
-              </div>
-              <canvas v-else id="salesBarChart" height="120"></canvas>
-            </div>
-          </div>
+      <!-- ── Tabs ── -->
+      <div class="tab-bar mb-5">
+        <button
+          class="tab-btn"
+          :class="{ 'tab-btn--active': activeTab === 'daily' }"
+          @click="activeTab = 'daily'"
+        >
+          <v-icon size="16" class="mr-1">mdi-calendar-today</v-icon> Daily Reports
+        </button>
+        <button
+          class="tab-btn"
+          :class="{ 'tab-btn--active': activeTab === 'monthly' }"
+          @click="activeTab = 'monthly'"
+        >
+          <v-icon size="16" class="mr-1">mdi-calendar-month</v-icon> Monthly Reports
+        </button>
+      </div>
 
-          <!-- Daily Reports Table -->
-          <div class="section-card">
-            <div class="section-card-header">
-              <div class="d-flex align-center ga-2">
-                <v-icon size="18" color="#8b0000">mdi-table-large</v-icon>
-                <span class="section-card-title">Daily Report History</span>
-              </div>
-              <v-chip size="small" color="error" variant="tonal"
-                >{{ allReports.length }} entries</v-chip
-              >
-            </div>
-
-            <div v-if="allReports.length === 0" class="empty-chart pa-10 text-center">
-              <v-icon size="38" color="grey-lighten-2" class="mb-2"
-                >mdi-calendar-blank-outline</v-icon
-              >
-              <p class="empty-chart-text">No reports found.</p>
-            </div>
-
-            <div v-else class="table-wrap">
-              <v-table class="report-table" hover>
-                <thead>
-                  <tr>
-                    <th class="th-cell">Date</th>
-                    <th class="th-cell">Sales</th>
-                    <th class="th-cell">Expenses</th>
-                    <th class="th-cell">Net Profit</th>
-                    <th class="th-cell">Margin</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="r in allReports" :key="r.date" class="td-row">
-                    <td class="td-cell">
-                      <v-chip size="small" color="blue-grey" variant="tonal" class="date-chip">
-                        <v-icon start size="11">mdi-calendar</v-icon>
-                        {{ formatDate(r.date) }}
-                      </v-chip>
-                    </td>
-                    <td class="td-cell">
-                      <span class="val-green">₱{{ r.sales.toLocaleString() }}</span>
-                    </td>
-                    <td class="td-cell">
-                      <span class="val-red">₱{{ r.expenses.toLocaleString() }}</span>
-                    </td>
-                    <td class="td-cell">
-                      <span
-                        class="profit-badge"
-                        :style="{
-                          color: profitColor(r.profit),
-                          background: r.profit >= 0 ? '#e8f5e9' : '#fff5f5',
-                          border: `1px solid ${r.profit >= 0 ? '#a5d6a7' : '#ffcdd2'}`,
-                        }"
-                      >
-                        {{ r.profit >= 0 ? '+' : '' }}₱{{ r.profit.toLocaleString() }}
-                      </span>
-                    </td>
-                    <td class="td-cell">
-                      <div class="margin-wrap">
-                        <div class="margin-bar-track">
-                          <div
-                            class="margin-bar-fill"
-                            :style="{
-                              width:
-                                r.sales > 0
-                                  ? Math.min(Math.abs(r.profit / r.sales) * 100, 100) + '%'
-                                  : '0%',
-                              background:
-                                r.profit >= 0
-                                  ? 'linear-gradient(90deg,#2e7d32,#66bb6a)'
-                                  : 'linear-gradient(90deg,#8b0000,#ef5350)',
-                            }"
-                          ></div>
-                        </div>
-                        <span class="margin-pct" :style="{ color: profitColor(r.profit) }">
-                          {{ r.sales > 0 ? ((r.profit / r.sales) * 100).toFixed(1) : 0 }}%
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </v-table>
-            </div>
-          </div>
-        </v-col>
-
-        <!-- Right Sidebar -->
-        <v-col cols="12" lg="4">
-          <!-- Donut Chart -->
-          <div class="section-card mb-5">
-            <div class="section-card-header">
-              <div class="d-flex align-center ga-2">
-                <v-icon size="18" color="#8b0000">mdi-chart-donut</v-icon>
-                <span class="section-card-title">Profitable vs Loss Days</span>
-              </div>
-            </div>
-            <div class="section-card-body">
-              <div v-if="allReports.length === 0" class="empty-chart text-center py-6">
-                <v-icon size="38" color="grey-lighten-2" class="mb-2">mdi-chart-donut</v-icon>
-                <p class="empty-chart-text">No data yet.</p>
-              </div>
-              <canvas v-else id="profitDonut" height="200"></canvas>
-            </div>
-          </div>
-
-          <!-- Top Products by Value -->
-          <div class="section-card mb-5">
-            <div class="section-card-header">
-              <div class="d-flex align-center ga-2">
-                <v-icon size="18" color="#8b0000">mdi-star-outline</v-icon>
-                <span class="section-card-title">Top Products by Value</span>
-              </div>
-              <v-chip size="small" color="error" variant="tonal">{{ topProducts.length }}</v-chip>
-            </div>
-            <div class="section-card-body pa-0">
-              <div v-if="topProducts.length === 0" class="pa-8 text-center">
-                <v-icon size="36" color="grey-lighten-2" class="mb-2"
-                  >mdi-package-variant-closed</v-icon
-                >
-                <p class="empty-chart-text">No products yet.</p>
-              </div>
-              <div
-                v-for="(p, i) in topProducts"
-                :key="p.id"
-                class="top-product-row"
-                :class="{ 'top-product-row--last': i === topProducts.length - 1 }"
-              >
-                <div class="rank-badge">{{ i + 1 }}</div>
-                <div class="top-product-avatar">{{ p.name.charAt(0).toUpperCase() }}</div>
-                <div class="flex-grow-1">
-                  <p class="top-product-name">{{ p.name }}</p>
-                  <p class="top-product-meta">{{ p.quantity }} {{ p.unit }}</p>
+      <!-- ══════════ DAILY TAB ══════════ -->
+      <div v-if="activeTab === 'daily'">
+        <v-row dense>
+          <v-col cols="12" lg="8">
+            <!-- Bar Chart -->
+            <div class="section-card mb-5">
+              <div class="section-card-header">
+                <div class="d-flex align-center ga-2">
+                  <v-icon size="18" color="#8b0000">mdi-chart-bar</v-icon>
+                  <span class="section-card-title">Daily Sales vs Expenses vs Profit</span>
                 </div>
-                <span class="top-product-val">₱{{ p.totalPrice.toLocaleString() }}</span>
+                <span class="section-card-sub">Last {{ recentReports.length }} days</span>
+              </div>
+              <div class="section-card-body">
+                <div v-if="recentReports.length === 0" class="empty-chart">
+                  <v-icon size="42" color="grey-lighten-2" class="mb-2"
+                    >mdi-chart-bar-stacked</v-icon
+                  >
+                  <p class="empty-chart-text">
+                    No daily reports yet. End a day from the Dashboard to generate data.
+                  </p>
+                </div>
+                <canvas v-else id="salesBarChart" height="120"></canvas>
               </div>
             </div>
-          </div>
 
-          <!-- Quick Stats -->
-          <div class="section-card">
-            <div class="section-card-header">
-              <div class="d-flex align-center ga-2">
-                <v-icon size="18" color="#8b0000">mdi-lightning-bolt-outline</v-icon>
-                <span class="section-card-title">Quick Stats</span>
+            <!-- Daily Reports Table -->
+            <div class="section-card">
+              <div class="section-card-header">
+                <div class="d-flex align-center ga-2">
+                  <v-icon size="18" color="#8b0000">mdi-table-large</v-icon>
+                  <span class="section-card-title">Daily Report History</span>
+                </div>
+                <div class="d-flex align-center ga-2">
+                  <v-chip size="small" color="error" variant="tonal"
+                    >{{ allReports.length }} entries</v-chip
+                  >
+                  <v-btn
+                    size="x-small"
+                    variant="tonal"
+                    color="success"
+                    rounded="lg"
+                    @click="exportDailyCSV"
+                  >
+                    <v-icon size="13" start>mdi-microsoft-excel</v-icon>CSV
+                  </v-btn>
+                </div>
               </div>
-            </div>
-            <div class="section-card-body">
-              <div class="qs-row">
-                <span class="qs-label">Avg Daily Sales</span>
-                <span class="qs-val"
-                  >₱{{
-                    allReports.length
-                      ? Math.round(totalSales / allReports.length).toLocaleString()
-                      : 0
-                  }}</span
+              <div v-if="allReports.length === 0" class="empty-chart pa-10 text-center">
+                <v-icon size="38" color="grey-lighten-2" class="mb-2"
+                  >mdi-calendar-blank-outline</v-icon
                 >
+                <p class="empty-chart-text">No reports found.</p>
               </div>
-              <div class="qs-row">
-                <span class="qs-label">Avg Daily Profit</span>
-                <span class="qs-val" :style="{ color: profitColor(totalProfit) }">
-                  ₱{{
-                    allReports.length
-                      ? Math.round(totalProfit / allReports.length).toLocaleString()
-                      : 0
-                  }}
-                </span>
-              </div>
-              <div class="qs-row">
-                <span class="qs-label">Total Products</span>
-                <span class="qs-val">{{ products.length }}</span>
-              </div>
-              <div class="qs-row">
-                <span class="qs-label">Low Stock Items</span>
-                <span class="qs-val" style="color: #c62828">{{ lowStockProducts.length }}</span>
-              </div>
-              <div class="qs-row">
-                <span class="qs-label">Overall Margin</span>
-                <span class="qs-val" :style="{ color: profitColor(totalProfit) }">
-                  {{ totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(1) : 0 }}%
-                </span>
+              <div v-else class="table-wrap">
+                <v-table class="report-table" hover>
+                  <thead>
+                    <tr>
+                      <th class="th-cell">Date</th>
+                      <th class="th-cell">Sales</th>
+                      <th class="th-cell">Expenses</th>
+                      <th class="th-cell">Net Profit</th>
+                      <th class="th-cell">Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="r in allReports" :key="r.date" class="td-row">
+                      <td class="td-cell">
+                        <v-chip size="small" color="blue-grey" variant="tonal" class="date-chip">
+                          <v-icon start size="11">mdi-calendar</v-icon>{{ formatDate(r.date) }}
+                        </v-chip>
+                      </td>
+                      <td class="td-cell">
+                        <span class="val-green">₱{{ r.sales.toLocaleString() }}</span>
+                      </td>
+                      <td class="td-cell">
+                        <span class="val-red">₱{{ r.expenses.toLocaleString() }}</span>
+                      </td>
+                      <td class="td-cell">
+                        <span
+                          class="profit-badge"
+                          :style="{
+                            color: profitColor(r.profit),
+                            background: r.profit >= 0 ? '#e8f5e9' : '#fff5f5',
+                            border: `1px solid ${r.profit >= 0 ? '#a5d6a7' : '#ffcdd2'}`,
+                          }"
+                        >
+                          {{ r.profit >= 0 ? '+' : '' }}₱{{ r.profit.toLocaleString() }}
+                        </span>
+                      </td>
+                      <td class="td-cell">
+                        <div class="margin-wrap">
+                          <div class="margin-bar-track">
+                            <div
+                              class="margin-bar-fill"
+                              :style="{
+                                width:
+                                  r.sales > 0
+                                    ? Math.min(Math.abs(r.profit / r.sales) * 100, 100) + '%'
+                                    : '0%',
+                                background:
+                                  r.profit >= 0
+                                    ? 'linear-gradient(90deg,#2e7d32,#66bb6a)'
+                                    : 'linear-gradient(90deg,#8b0000,#ef5350)',
+                              }"
+                            ></div>
+                          </div>
+                          <span class="margin-pct" :style="{ color: profitColor(r.profit) }"
+                            >{{ r.sales > 0 ? ((r.profit / r.sales) * 100).toFixed(1) : 0 }}%</span
+                          >
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </v-table>
               </div>
             </div>
-          </div>
-        </v-col>
-      </v-row>
+          </v-col>
+
+          <!-- Right Sidebar -->
+          <v-col cols="12" lg="4">
+            <div class="section-card mb-5">
+              <div class="section-card-header">
+                <div class="d-flex align-center ga-2">
+                  <v-icon size="18" color="#8b0000">mdi-chart-donut</v-icon>
+                  <span class="section-card-title">Profitable vs Loss Days</span>
+                </div>
+              </div>
+              <div class="section-card-body">
+                <div v-if="allReports.length === 0" class="empty-chart text-center py-6">
+                  <v-icon size="38" color="grey-lighten-2" class="mb-2">mdi-chart-donut</v-icon>
+                  <p class="empty-chart-text">No data yet.</p>
+                </div>
+                <canvas v-else id="profitDonut" height="200"></canvas>
+              </div>
+            </div>
+
+            <div class="section-card mb-5">
+              <div class="section-card-header">
+                <div class="d-flex align-center ga-2">
+                  <v-icon size="18" color="#8b0000">mdi-star-outline</v-icon>
+                  <span class="section-card-title">Top Products by Value</span>
+                </div>
+                <v-chip size="small" color="error" variant="tonal">{{ topProducts.length }}</v-chip>
+              </div>
+              <div class="section-card-body pa-0">
+                <div v-if="topProducts.length === 0" class="pa-8 text-center">
+                  <v-icon size="36" color="grey-lighten-2" class="mb-2"
+                    >mdi-package-variant-closed</v-icon
+                  >
+                  <p class="empty-chart-text">No products yet.</p>
+                </div>
+                <div
+                  v-for="(p, i) in topProducts"
+                  :key="p.id"
+                  class="top-product-row"
+                  :class="{ 'top-product-row--last': i === topProducts.length - 1 }"
+                >
+                  <div class="rank-badge">{{ i + 1 }}</div>
+                  <div class="top-product-avatar">{{ p.name.charAt(0).toUpperCase() }}</div>
+                  <div class="flex-grow-1">
+                    <p class="top-product-name">{{ p.name }}</p>
+                    <p class="top-product-meta">{{ p.quantity }} {{ p.unit }}</p>
+                  </div>
+                  <span class="top-product-val">₱{{ p.totalPrice.toLocaleString() }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-card">
+              <div class="section-card-header">
+                <div class="d-flex align-center ga-2">
+                  <v-icon size="18" color="#8b0000">mdi-lightning-bolt-outline</v-icon>
+                  <span class="section-card-title">Quick Stats</span>
+                </div>
+              </div>
+              <div class="section-card-body">
+                <div class="qs-row">
+                  <span class="qs-label">Avg Daily Sales</span
+                  ><span class="qs-val"
+                    >₱{{
+                      allReports.length
+                        ? Math.round(totalSales / allReports.length).toLocaleString()
+                        : 0
+                    }}</span
+                  >
+                </div>
+                <div class="qs-row">
+                  <span class="qs-label">Avg Daily Profit</span
+                  ><span class="qs-val" :style="{ color: profitColor(totalProfit) }"
+                    >₱{{
+                      allReports.length
+                        ? Math.round(totalProfit / allReports.length).toLocaleString()
+                        : 0
+                    }}</span
+                  >
+                </div>
+                <div class="qs-row">
+                  <span class="qs-label">Total Products</span
+                  ><span class="qs-val">{{ products.length }}</span>
+                </div>
+                <div class="qs-row">
+                  <span class="qs-label">Low Stock Items</span
+                  ><span class="qs-val" style="color: #c62828">{{ lowStockProducts.length }}</span>
+                </div>
+                <div class="qs-row">
+                  <span class="qs-label">Overall Margin</span
+                  ><span class="qs-val" :style="{ color: profitColor(totalProfit) }"
+                    >{{ totalSales > 0 ? ((totalProfit / totalSales) * 100).toFixed(1) : 0 }}%</span
+                  >
+                </div>
+              </div>
+            </div>
+          </v-col>
+        </v-row>
+      </div>
+
+      <!-- ══════════ MONTHLY TAB ══════════ -->
+      <div v-if="activeTab === 'monthly'">
+        <v-row dense>
+          <v-col cols="12" lg="8">
+            <!-- Monthly Bar Chart -->
+            <div class="section-card mb-5">
+              <div class="section-card-header">
+                <div class="d-flex align-center ga-2">
+                  <v-icon size="18" color="#8b0000">mdi-chart-bar</v-icon>
+                  <span class="section-card-title">Monthly Sales vs Expenses vs Profit</span>
+                </div>
+                <span class="section-card-sub">{{ monthlyReports.length }} months</span>
+              </div>
+              <div class="section-card-body">
+                <div v-if="monthlyReports.length === 0" class="empty-chart">
+                  <v-icon size="42" color="grey-lighten-2" class="mb-2"
+                    >mdi-chart-bar-stacked</v-icon
+                  >
+                  <p class="empty-chart-text">No monthly data yet.</p>
+                </div>
+                <canvas v-else id="monthlyBarChart" height="120"></canvas>
+              </div>
+            </div>
+
+            <!-- Monthly Detail Table -->
+            <div class="section-card">
+              <div class="section-card-header">
+                <div class="d-flex align-center ga-2">
+                  <v-icon size="18" color="#8b0000">mdi-table-large</v-icon>
+                  <span class="section-card-title">Monthly Breakdown</span>
+                </div>
+                <div class="d-flex align-center ga-2">
+                  <v-select
+                    v-model="selectedMonth"
+                    :items="availableMonths"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    style="min-width: 180px; max-width: 200px"
+                    class="month-select"
+                  />
+                  <v-btn
+                    size="x-small"
+                    variant="tonal"
+                    color="success"
+                    rounded="lg"
+                    @click="exportMonthlyDetailCSV"
+                  >
+                    <v-icon size="13" start>mdi-microsoft-excel</v-icon>CSV
+                  </v-btn>
+                </div>
+              </div>
+
+              <!-- Selected month summary -->
+              <div class="month-summary-row px-5 py-4">
+                <div class="month-sum-item">
+                  <p class="month-sum-label">Sales</p>
+                  <p class="month-sum-val month-sum-val--green">
+                    ₱{{ selectedMonthSummary.sales.toLocaleString() }}
+                  </p>
+                </div>
+                <div class="month-sum-divider"></div>
+                <div class="month-sum-item">
+                  <p class="month-sum-label">Expenses</p>
+                  <p class="month-sum-val month-sum-val--red">
+                    ₱{{ selectedMonthSummary.expenses.toLocaleString() }}
+                  </p>
+                </div>
+                <div class="month-sum-divider"></div>
+                <div class="month-sum-item">
+                  <p class="month-sum-label">Net Profit</p>
+                  <p
+                    class="month-sum-val"
+                    :style="{ color: profitColor(selectedMonthSummary.profit) }"
+                  >
+                    ₱{{ selectedMonthSummary.profit.toLocaleString() }}
+                  </p>
+                </div>
+                <div class="month-sum-divider"></div>
+                <div class="month-sum-item">
+                  <p class="month-sum-label">Days</p>
+                  <p class="month-sum-val">{{ selectedMonthSummary.days }}</p>
+                </div>
+              </div>
+
+              <v-divider></v-divider>
+
+              <div v-if="filteredDailyReports.length === 0" class="empty-chart pa-10 text-center">
+                <v-icon size="38" color="grey-lighten-2" class="mb-2"
+                  >mdi-calendar-blank-outline</v-icon
+                >
+                <p class="empty-chart-text">No reports for this month.</p>
+              </div>
+              <div v-else class="table-wrap">
+                <v-table class="report-table" hover>
+                  <thead>
+                    <tr>
+                      <th class="th-cell">Date</th>
+                      <th class="th-cell">Sales</th>
+                      <th class="th-cell">Expenses</th>
+                      <th class="th-cell">Net Profit</th>
+                      <th class="th-cell">Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="r in filteredDailyReports" :key="r.date" class="td-row">
+                      <td class="td-cell">
+                        <v-chip size="small" color="blue-grey" variant="tonal" class="date-chip">
+                          <v-icon start size="11">mdi-calendar</v-icon>{{ formatDate(r.date) }}
+                        </v-chip>
+                      </td>
+                      <td class="td-cell">
+                        <span class="val-green">₱{{ r.sales.toLocaleString() }}</span>
+                      </td>
+                      <td class="td-cell">
+                        <span class="val-red">₱{{ r.expenses.toLocaleString() }}</span>
+                      </td>
+                      <td class="td-cell">
+                        <span
+                          class="profit-badge"
+                          :style="{
+                            color: profitColor(r.profit),
+                            background: r.profit >= 0 ? '#e8f5e9' : '#fff5f5',
+                            border: `1px solid ${r.profit >= 0 ? '#a5d6a7' : '#ffcdd2'}`,
+                          }"
+                        >
+                          {{ r.profit >= 0 ? '+' : '' }}₱{{ r.profit.toLocaleString() }}
+                        </span>
+                      </td>
+                      <td class="td-cell">
+                        <div class="margin-wrap">
+                          <div class="margin-bar-track">
+                            <div
+                              class="margin-bar-fill"
+                              :style="{
+                                width:
+                                  r.sales > 0
+                                    ? Math.min(Math.abs(r.profit / r.sales) * 100, 100) + '%'
+                                    : '0%',
+                                background:
+                                  r.profit >= 0
+                                    ? 'linear-gradient(90deg,#2e7d32,#66bb6a)'
+                                    : 'linear-gradient(90deg,#8b0000,#ef5350)',
+                              }"
+                            ></div>
+                          </div>
+                          <span class="margin-pct" :style="{ color: profitColor(r.profit) }"
+                            >{{ r.sales > 0 ? ((r.profit / r.sales) * 100).toFixed(1) : 0 }}%</span
+                          >
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </v-table>
+              </div>
+            </div>
+          </v-col>
+
+          <!-- Right: Monthly Summary Cards -->
+          <v-col cols="12" lg="4">
+            <div class="section-card">
+              <div class="section-card-header">
+                <div class="d-flex align-center ga-2">
+                  <v-icon size="18" color="#8b0000">mdi-calendar-month</v-icon>
+                  <span class="section-card-title">All Months Summary</span>
+                </div>
+                <v-btn
+                  size="x-small"
+                  variant="tonal"
+                  color="success"
+                  rounded="lg"
+                  @click="exportMonthlyCSV"
+                >
+                  <v-icon size="13" start>mdi-microsoft-excel</v-icon>CSV
+                </v-btn>
+              </div>
+              <div class="section-card-body pa-0">
+                <div v-if="monthlyReports.length === 0" class="pa-8 text-center">
+                  <v-icon size="36" color="grey-lighten-2" class="mb-2"
+                    >mdi-calendar-blank-outline</v-icon
+                  >
+                  <p class="empty-chart-text">No monthly data yet.</p>
+                </div>
+                <div
+                  v-for="(m, i) in monthlyReports"
+                  :key="m.month"
+                  class="monthly-row"
+                  :class="{
+                    'monthly-row--active': selectedMonth === m.month,
+                    'monthly-row--last': i === monthlyReports.length - 1,
+                  }"
+                  @click="selectedMonth = m.month"
+                >
+                  <div class="monthly-row-top">
+                    <span class="monthly-name">{{ formatMonth(m.month) }}</span>
+                    <span class="monthly-days">{{ m.days }} days</span>
+                  </div>
+                  <div class="monthly-row-stats">
+                    <span class="val-green text-caption font-weight-bold"
+                      >₱{{ m.sales.toLocaleString() }}</span
+                    >
+                    <span class="text-caption text-grey mx-1">|</span>
+                    <span class="val-red text-caption font-weight-bold"
+                      >₱{{ m.expenses.toLocaleString() }}</span
+                    >
+                    <span class="text-caption text-grey mx-1">|</span>
+                    <span
+                      class="text-caption font-weight-bold"
+                      :style="{ color: profitColor(m.profit) }"
+                      >₱{{ m.profit.toLocaleString() }}</span
+                    >
+                  </div>
+                  <div class="monthly-profit-bar-track mt-1">
+                    <div
+                      class="monthly-profit-bar-fill"
+                      :style="{
+                        width: m.sales > 0 ? Math.min((m.profit / m.sales) * 100, 100) + '%' : '0%',
+                        background:
+                          m.profit >= 0
+                            ? 'linear-gradient(90deg,#2e7d32,#66bb6a)'
+                            : 'linear-gradient(90deg,#8b0000,#ef5350)',
+                      }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </v-col>
+        </v-row>
+      </div>
     </v-container>
   </div>
 </template>
@@ -521,6 +904,53 @@ const formatDate = (d) =>
   font-size: 0.82rem;
   font-weight: 600;
   color: #333;
+}
+
+.export-btn-daily {
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #2e7d32 !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+  text-transform: none !important;
+}
+.export-btn-monthly {
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #1565c0 !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+  text-transform: none !important;
+}
+
+/* ── Tabs ── */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  width: fit-content;
+}
+.tab-btn {
+  display: flex;
+  align-items: center;
+  padding: 8px 20px;
+  border-radius: 9px;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #666;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+.tab-btn:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+.tab-btn--active {
+  background: linear-gradient(135deg, #7b0000, #c62828);
+  color: #fff;
 }
 
 /* ── KPI Cards ── */
@@ -602,6 +1032,7 @@ const formatDate = (d) =>
   border: 1px solid rgba(0, 0, 0, 0.06);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   overflow: hidden;
+  margin-bottom: 20px;
 }
 .section-card-header {
   display: flex;
@@ -621,6 +1052,99 @@ const formatDate = (d) =>
 }
 .section-card-body {
   padding: 20px;
+}
+
+/* ── Month Select ── */
+.month-select :deep(.v-field) {
+  border-radius: 9px;
+  font-size: 0.82rem;
+}
+
+/* ── Month Summary Row ── */
+.month-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+.month-sum-item {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+}
+.month-sum-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 2px;
+}
+.month-sum-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0;
+  color: #1a1a1a;
+}
+.month-sum-val--green {
+  color: #2e7d32;
+}
+.month-sum-val--red {
+  color: #c62828;
+}
+.month-sum-divider {
+  width: 1px;
+  height: 40px;
+  background: #e0e0e0;
+}
+
+/* ── Monthly rows in sidebar ── */
+.monthly-row {
+  padding: 14px 20px;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.monthly-row:hover {
+  background: #fdf5f5;
+}
+.monthly-row--active {
+  background: #fff5f5;
+  border-left: 3px solid #c62828;
+}
+.monthly-row--last {
+  border-bottom: none;
+}
+.monthly-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+.monthly-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+.monthly-days {
+  font-size: 0.72rem;
+  color: #888;
+}
+.monthly-row-stats {
+  display: flex;
+  align-items: center;
+}
+.monthly-profit-bar-track {
+  height: 4px;
+  background: #f0f0f0;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.monthly-profit-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s ease;
 }
 
 /* ── Empty ── */

@@ -1,9 +1,13 @@
 import { computed } from 'vue'
 import { getClient, getBranchId } from './useProductClient'
-import { todayKey, dailyReports, getTodayReport, currentSimulatedDate } from './useProductState'
+import { todayKey, dailyReports, currentSimulatedDate } from './useProductState'
 
 export const setTodaySales = (amount) => {
-  getTodayReport().sales = Number(amount) || 0
+  const date = currentSimulatedDate.value
+  if (!dailyReports.value[date]) {
+    dailyReports.value[date] = { sales: 0, expenses: 0 }
+  }
+  dailyReports.value[date].sales = Number(amount) || 0
 }
 
 export const setBusinessDate = (newDate) => {
@@ -12,19 +16,32 @@ export const setBusinessDate = (newDate) => {
 
 export const saveDailyReport = async () => {
   const today = todayKey()
-  const report = getTodayReport()
+  const report = dailyReports.value[today] || { sales: 0, expenses: 0 }
   const branch_id = await getBranchId()
-  if (!branch_id) { console.error('No branch_id for report'); return }
+  if (!branch_id) {
+    console.error('No branch_id for report')
+    return
+  }
 
   try {
     const { data, error } = await getClient()
       .from('daily_reports')
-      .insert([{ report_date: today, sales: report.sales, expenses: report.expenses, profit: report.sales - report.expenses, branch_id }])
+      .insert([
+        {
+          report_date: today,
+          sales: report.sales,
+          expenses: report.expenses,
+          profit: report.sales - report.expenses,
+          branch_id,
+        },
+      ])
       .select()
 
     if (error) throw error
     return data
-  } catch (e) { console.error('saveDailyReport:', e) }
+  } catch (e) {
+    console.error('saveDailyReport:', e)
+  }
 }
 
 export const endDay = async () => {
@@ -37,5 +54,10 @@ export const endDay = async () => {
 export const allReports = computed(() =>
   Object.entries(dailyReports.value)
     .sort((a, b) => b[0].localeCompare(a[0]))
-    .map(([date, data]) => ({ date, sales: data.sales, expenses: data.expenses, profit: data.sales - data.expenses }))
+    .map(([date, data]) => ({
+      date,
+      sales: data.sales,
+      expenses: data.expenses,
+      profit: data.sales - data.expenses,
+    })),
 )
