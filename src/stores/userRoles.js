@@ -7,16 +7,13 @@ export const useUserRolesStore = defineStore('userRoles', () => {
   const authStore = useAuthUserStore()
   const userRoles = ref([])
 
-  // ✅ Reads: role-based client. Writes: always supabaseAdmin
-  const getClient = () =>
-    authStore.userRole === 'Super Administrator' ? supabaseAdmin : supabase
-
   function $reset() {
     userRoles.value = []
   }
 
+  // ✅ Read uses supabase (user JWT) — RLS "All users - View user roles" allows authenticated reads
   async function getUserRoles() {
-    const { data } = await getClient()
+    const { data } = await supabase
       .from('user_roles')
       .select('*, pages: user_role_pages (page)')
       .order('user_role', { ascending: true })
@@ -24,9 +21,10 @@ export const useUserRolesStore = defineStore('userRoles', () => {
     userRoles.value = data ?? []
   }
 
+  // ✅ Writes use supabase — RLS "Super Admin - Manage user roles" restricts to Super Admin only
   async function addUserRole(formData) {
     const { pages, ...roleData } = formData
-    const { data, error } = await supabaseAdmin.from('user_roles').insert([roleData]).select()
+    const { data, error } = await supabase.from('user_roles').insert([roleData]).select()
     if (error) return { data, error }
     await updateUserRolePages(data[0].id, pages)
     return { data, error }
@@ -34,7 +32,7 @@ export const useUserRolesStore = defineStore('userRoles', () => {
 
   async function updateUserRole(formData) {
     const { pages, ...roleData } = formData
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from('user_roles')
       .update(roleData)
       .eq('id', roleData.id)
@@ -45,11 +43,11 @@ export const useUserRolesStore = defineStore('userRoles', () => {
   }
 
   async function deleteUserRole(id) {
-    return await supabaseAdmin.from('user_roles').delete().eq('id', id)
+    return await supabase.from('user_roles').delete().eq('id', id)
   }
 
   async function updateUserRolePages(id, pages) {
-    const { error: deleteError } = await supabaseAdmin
+    const { error: deleteError } = await supabase
       .from('user_role_pages')
       .delete()
       .eq('user_role_id', id)
@@ -57,7 +55,7 @@ export const useUserRolesStore = defineStore('userRoles', () => {
     if (deleteError) return { error: deleteError }
 
     const pageData = pages.map((page) => ({ page, user_role_id: id }))
-    const { data, error: insertError } = await supabaseAdmin
+    const { data, error: insertError } = await supabase
       .from('user_role_pages')
       .insert(pageData)
       .select()

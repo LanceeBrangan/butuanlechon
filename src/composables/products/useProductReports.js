@@ -1,5 +1,6 @@
 import { computed } from 'vue'
-import { getClient, getBranchId } from './useProductClient'
+import { getBranchId } from './useProductClient'
+import { supabase } from '@/utils/supabase'
 import { todayKey, dailyReports, currentSimulatedDate } from './useProductState'
 
 export const setTodaySales = (amount) => {
@@ -24,7 +25,7 @@ export const saveDailyReport = async () => {
   }
 
   try {
-    const { data, error } = await getClient()
+    const { data, error } = await supabase
       .from('daily_reports')
       .insert([
         {

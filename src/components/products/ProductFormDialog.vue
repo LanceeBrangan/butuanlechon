@@ -1,35 +1,45 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useBranchesStore } from '@/stores/branches'
+import { useAuthUserStore } from '@/stores/authUser'
+import { storeToRefs } from 'pinia'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   isEditMode: { type: Boolean, default: false },
   initialForm: { type: Object, default: () => ({}) },
   currentDate: { type: String, default: '' },
-  existingProducts: { type: Array, default: () => []},
+  existingProducts: { type: Array, default: () => [] },
+})
 
+const emit = defineEmits(['update:modelValue', 'save'])
+
+const authStore = useAuthUserStore()
+const branchesStore = useBranchesStore()
+const { branches } = storeToRefs(branchesStore)
+
+const isSuperAdmin = computed(() => authStore.userRole === 'Super Administrator')
+
+// Load branches for Super Admin dropdown
+watch(() => props.modelValue, async (open) => {
+  if (open && isSuperAdmin.value && branches.value.length === 0) {
+    await branchesStore.getBranches()
+  }
 })
 
 const onProductSelect = (val) => {
   if (val && typeof val === 'object') {
-    // picked from dropdown — auto-fill unit
     productForm.value.name = val.name
     productForm.value.unit = val.unit
   } else {
-    // typed freely — just keep the string
     productForm.value.name = val
   }
 }
 
-
-const emit = defineEmits(['update:modelValue', 'save'])
-
 const valid = ref(false)
 const productFormRef = ref(null)
-
 const productForm = ref({ ...props.initialForm })
 
-// Sync form when parent updates initialForm (e.g. opening for edit)
 watch(() => props.initialForm, (val) => {
   productForm.value = { ...val }
 }, { deep: true })
@@ -40,6 +50,7 @@ const nameRules     = [(v) => !!v || 'Product name is required', (v) => (v && v.
 const quantityRules = [(v) => !!v || 'Quantity is required', (v) => v > 0 || 'Must be greater than 0']
 const unitRules     = [(v) => !!v || 'Unit is required']
 const priceRules    = [(v) => !!v || 'Price is required', (v) => v > 0 || 'Must be greater than 0']
+const branchRules   = [(v) => !!v || 'Branch is required']
 
 const close = () => {
   emit('update:modelValue', false)
@@ -66,6 +77,23 @@ const save = () => {
       <v-card-text class="px-8 py-6">
         <v-form ref="productFormRef" v-model="valid">
           <v-row>
+
+            <!-- Branch selector — Super Admin only -->
+            <v-col cols="12" v-if="isSuperAdmin && !isEditMode">
+              <v-select
+                v-model="productForm.branch_id"
+                :items="branches"
+                item-title="name"
+                item-value="id"
+                label="Branch"
+                :rules="branchRules"
+                variant="outlined"
+                class="form-field"
+                prepend-inner-icon="mdi-store-outline"
+                density="comfortable"
+              />
+            </v-col>
+
             <v-col cols="12">
               <v-combobox
                 v-model="productForm.name"
@@ -143,6 +171,7 @@ const save = () => {
                 density="comfortable"
               />
             </v-col>
+
             <v-col cols="6">
               <v-text-field
                 v-model="productForm.shelfLifeDays"
@@ -157,6 +186,7 @@ const save = () => {
                 persistent-hint
               />
             </v-col>
+
           </v-row>
         </v-form>
       </v-card-text>

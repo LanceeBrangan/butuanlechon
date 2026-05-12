@@ -12,10 +12,6 @@ export const useReportsStore = defineStore('reports', () => {
   const salesReport = ref([])
   const dailyReports = ref([])
 
-  // ✅ Role-based client
-  const getClient = () =>
-    authStore.userRole === 'Super Administrator' ? supabaseAdmin : supabase
-
   function $reset() {
     productsReport.value = []
     stocksReport.value = []
@@ -23,10 +19,11 @@ export const useReportsStore = defineStore('reports', () => {
     dailyReports.value = []
   }
 
+  // ✅ All reads use supabase (user JWT) — RLS handles role-based filtering
   async function getProductsReport(tableOptions, { product_id, branch_id, date }) {
     if (!date) return
 
-    let query = getClient()
+    let query = supabase
       .from('products')
       .select('id, name, image_url, description, stock_ins( qty, qty_reweighed, qty_metric, branch_id, is_segregated, is_portion, purchased_at ), sale_products( qty, branch_id, created_at )')
       .order('name', { ascending: true })
@@ -88,7 +85,7 @@ export const useReportsStore = defineStore('reports', () => {
     const { column, order } = tablePagination(tableOptions, 'created_at', false)
     search = tableSearch(search)
 
-    let query = getClient()
+    let query = supabase
       .from('stock_ins')
       .select('*, branches( name ), products( name, image_url, description ), sale_products( qty )')
       .order(column, { ascending: order })
@@ -131,7 +128,7 @@ export const useReportsStore = defineStore('reports', () => {
   async function getSalesReport(tableOptions, { customer_id, branch_id, created_at }) {
     const { column, order } = tablePagination(tableOptions, 'created_at', false)
 
-    let query = getClient()
+    let query = supabase
       .from('sales')
       .select('*, customers( customer ), branches( name ), sale_products( products(name, image_url), qty, discounted_price, unit_price, is_cash_discount, discount), customer_payments( payment, created_at )')
       .order(column, { ascending: order })
@@ -163,10 +160,9 @@ export const useReportsStore = defineStore('reports', () => {
     return query
   }
 
-  // ✅ daily_reports — Super Admin only writes, role-based reads
   async function getDailyReports() {
     try {
-      const { data, error } = await getClient()
+      const { data, error } = await supabase
         .from('daily_reports')
         .select('*')
         .order('report_date', { ascending: false })
@@ -180,9 +176,10 @@ export const useReportsStore = defineStore('reports', () => {
     }
   }
 
+  // ✅ Deletes use supabase — RLS restricts to Super Admin only
   async function deleteDailyReports(ids) {
     try {
-      const { error } = await supabaseAdmin.from('daily_reports').delete().in('id', ids)
+      const { error } = await supabase.from('daily_reports').delete().in('id', ids)
       if (error) throw error
       return true
     } catch (error) {
@@ -193,7 +190,7 @@ export const useReportsStore = defineStore('reports', () => {
 
   async function deleteAllDailyReports() {
     try {
-      const { error } = await supabaseAdmin.from('daily_reports').delete().neq('id', 0)
+      const { error } = await supabase.from('daily_reports').delete().neq('id', 0)
       if (error) throw error
       dailyReports.value = []
       return true

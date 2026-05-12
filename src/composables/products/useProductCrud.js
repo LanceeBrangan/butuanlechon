@@ -1,11 +1,15 @@
 import { useAuthUserStore } from '@/stores/authUser'
-import { getClient, getBranchId } from './useProductClient'
-import { products, currentSimulatedDate, todayKey, dailyReports } from './useProductState'
+import { getBranchId } from './useProductClient'
+import { supabase } from '@/utils/supabase'
+import { products, currentSimulatedDate, dailyReports } from './useProductState'
+
+// ✅ All operations use supabase (user JWT) — RLS handles permissions
+// supabaseAdmin is never used here; it bypasses RLS and has no user JWT
 
 export const fetchProducts = async () => {
   try {
     const authStore = useAuthUserStore()
-    let query = getClient().from('inventory').select('*').order('item_name', { ascending: true })
+    let query = supabase.from('inventory').select('*').order('purchase_date', { ascending: false })
 
     if (authStore.userRole !== 'Super Administrator') {
       const branchId = await getBranchId()
@@ -54,38 +58,36 @@ export const fetchProducts = async () => {
 export const addProduct = async (product, customDate = null) => {
   try {
     const authStore = useAuthUserStore()
-    const purchaseDate = customDate || currentSimulatedDate.value // ✅ FIX Bug #3 — use reactive ref
+    const purchaseDate = customDate || currentSimulatedDate.value
+    const isSuperAdmin = authStore.userRole === 'Super Administrator'
+
     const branch_id = product.branch_id || (await getBranchId())
 
     if (!branch_id) {
-      console.error('No branch_id available')
-      return
+      console.error('No branch_id available for adding product')
     }
 
-    // Check if product with same name already exists
-    const existing = products.value.find((p) => p.name.toLowerCase() === product.name.toLowerCase())
+    const existing = products.value.find(
+      (p) => p.name.toLowerCase() === product.name.toLowerCase()
+    )
 
     if (existing) {
-      // Merge: weighted average price + combined quantity
       const oldTotalValue = Number(existing.quantity) * Number(existing.price)
       const newTotalValue = Number(product.quantity) * Number(product.price)
       const newQuantity = Number(existing.quantity) + Number(product.quantity)
       const avgPrice = (oldTotalValue + newTotalValue) / newQuantity
 
-      const updated = {
+      return await updateProduct({
         ...existing,
         quantity: newQuantity,
         price: avgPrice,
         totalPrice: newQuantity * avgPrice,
         _additionalExpense: newTotalValue,
         _addedOnDate: purchaseDate,
-      }
-
-      return await updateProduct(updated)
+      })
     }
 
-    // No existing — insert as new
-    const { data, error } = await getClient()
+    const { data, error } = await supabase  // ✅ was getClient()
       .from('inventory')
       .insert([
         {
@@ -104,7 +106,6 @@ export const addProduct = async (product, customDate = null) => {
     if (error) throw error
 
     if (data && data.length > 0) {
-      // ✅ FIX Bug #1 — compute shelfLifeDays & expiryDate before push()
       const shelfLifeDays = product.shelfLifeDays || null
       let expiryDate = null
       if (shelfLifeDays && purchaseDate) {
@@ -129,12 +130,13 @@ export const addProduct = async (product, customDate = null) => {
       if (!dailyReports.value[purchaseDate]) {
         dailyReports.value[purchaseDate] = { sales: 0, expenses: 0 }
       }
-      dailyReports.value[purchaseDate].expenses += Number(product.quantity) * Number(product.price)
+      dailyReports.value[purchaseDate].expenses +=
+        Number(product.quantity) * Number(product.price)
     }
 
     return data
-  } catch (error) {
-    console.error('Error adding product:', error)
+  } catch (e) {
+    console.error('Error adding product:', e)
   }
 }
 
@@ -143,7 +145,7 @@ export const updateProduct = async (updated) => {
     const oldProduct = products.value.find((p) => p.id === updated.id)
     const newTotalPrice = updated.totalPrice || updated.quantity * updated.price
 
-    const { data, error } = await getClient()
+    const { data, error } = await supabase  // ✅ was getClient()
       .from('inventory')
       .update({
         item_name: updated.name,
@@ -184,7 +186,10 @@ export const updateProduct = async (updated) => {
 export const deleteProduct = async (id) => {
   try {
     const product = products.value.find((p) => p.id === id)
-    const { error } = await getClient().from('inventory').delete().eq('inv_id', id)
+    const { error } = await supabase  // ✅ was getClient()
+      .from('inventory')
+      .delete()
+      .eq('inv_id', id)
     if (error) throw error
 
     if (product?.purchaseDate) {

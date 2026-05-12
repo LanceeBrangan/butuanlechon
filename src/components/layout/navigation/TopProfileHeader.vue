@@ -7,14 +7,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { ref, computed, watch, onMounted } from 'vue'
 
 
-/*const { data } = await supabase.auth.getSession()
-const token = data.session.access_token
 
-// Decode the JWT payload
-const payload = JSON.parse(atob(token.split('.')[1]))
-console.log('user_role:', payload.user_role)
-console.log('branch:', payload.branch)
-console.log('is_admin:', payload.is_admin) */
+
 
 // Router setup
 const router = useRouter()

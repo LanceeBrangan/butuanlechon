@@ -13,10 +13,6 @@ export const useAuthUserStore = defineStore('authUser', () => {
     return userData.value?.user_role || userData.value?.role || 'No Role Assigned'
   })
 
-  // ✅ Auth store helper — always reads based on role
-  const getClient = () =>
-    userRole.value === 'Super Administrator' ? supabaseAdmin : supabase
-
   function $reset() {
     userData.value = null
     authPages.value = []
@@ -37,10 +33,10 @@ export const useAuthUserStore = defineStore('authUser', () => {
     userData.value = { id, email, ...user_metadata }
   }
 
+  // ✅ getAuthPages uses supabase (user JWT) — RLS policy allows all authenticated users to read user_roles
   async function getAuthPages(name) {
     if (!name) return
-    // Always use supabaseAdmin here — called during login before role is confirmed
-    const { data } = await supabaseAdmin
+    const { data } = await supabase
       .from('user_roles')
       .select('*, pages: user_role_pages (page)')
       .eq('user_role', name)
@@ -50,29 +46,29 @@ export const useAuthUserStore = defineStore('authUser', () => {
     }
   }
 
-async function getAuthBranchIds() {
-  if (!userData.value?.branch) {
-    console.warn('[getAuthBranchIds] No branch in userData:', userData.value)
-    return
+  // ✅ getAuthBranchIds uses supabase (user JWT) — RLS allows authenticated users to read branches
+  async function getAuthBranchIds() {
+    if (!userData.value?.branch) {
+      console.warn('[getAuthBranchIds] No branch in userData:', userData.value)
+      return
+    }
+
+    const branchNames = userData.value.branch.split(',').map(b => b.trim())
+
+    const { data, error } = await supabase
+      .from('branches')
+      .select('id')
+      .in('name', branchNames)
+
+    if (error) {
+      console.error('[getAuthBranchIds] Query error:', error)
+      return
+    }
+
+    console.log('[getAuthBranchIds] branchNames:', branchNames, '| matched:', data)
+    authBranchIds.value = data?.map((b) => b.id) ?? []
   }
 
-  const branchNames = userData.value.branch.split(',').map(b => b.trim()) // ← trim added
-
-  const { data, error } = await supabaseAdmin
-    .from('branches')
-    .select('id')
-    .in('name', branchNames)
-
-  if (error) {
-    console.error('[getAuthBranchIds] Query error:', error)
-    return
-  }
-
-  console.log('[getAuthBranchIds] branchNames:', branchNames, '| matched:', data)
-  authBranchIds.value = data?.map((b) => b.id) ?? []
-}
-
-  // Auth operations always use supabase (not admin)
   async function updateUserInformation(updatedData) {
     const { data: { user: { id, email, user_metadata } }, error } =
       await supabase.auth.updateUser({ data: { ...updatedData } })
@@ -91,14 +87,15 @@ async function getAuthBranchIds() {
     const filePath = `${userData.value.id}-avatar.png`
 
     try {
-      const { data, error } = await supabase.storage
+      // ✅ Storage uploads use supabaseAdmin — storage bucket policies require service role
+      const { data, error } = await supabaseAdmin.storage
         .from('butuanlechon')
         .upload(filePath, file, { cacheControl: '0', upsert: true, contentType: file.type || 'image/png' })
 
       if (error) return { error: { message: error.message, status: error.status || 500 } }
 
       const timestamp = new Date().getTime()
-      const { data: imageData } = supabase.storage.from('butuanlechon').getPublicUrl(filePath)
+      const { data: imageData } = supabaseAdmin.storage.from('butuanlechon').getPublicUrl(filePath)
       const cacheBustedUrl = `${imageData.publicUrl}?t=${timestamp}`
 
       await new Promise(resolve => setTimeout(resolve, 200))
