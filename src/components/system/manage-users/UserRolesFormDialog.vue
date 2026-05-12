@@ -12,7 +12,7 @@ import { formActionDefault } from '@/utils/supabase.js'
 import { useUserRolesStore } from '@/stores/userRoles'
 import { requiredValidator } from '@/utils/validators'
 import { useDisplay } from 'vuetify'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 
 const props = defineProps(['isDialogVisible', 'itemData'])
 
@@ -38,6 +38,13 @@ const formAction = ref({
 const refVForm = ref()
 const isUpdate = ref(false)
 const openedPages = ref(mainNav.map((elem) => elem[0]))
+
+// Map nav titles to their corresponding menu items
+const navMenuMap = computed(() => ({
+  [mainNav[0]?.[0]]: menuItemsNav1,
+  [mainNav[1]?.[0]]: menuItemsNav2,
+  [mainNav[2]?.[0]]: menuItemsNav3,
+}))
 
 // Monitor itemData if it has data
 watch(
@@ -130,90 +137,30 @@ const onFormReset = () => {
 
             <v-col cols="12">
               <v-list v-model:opened="openedPages" density="compact" nav>
-                <v-list-group v-for="([title, icon], i) in mainNav" :key="i" :value="title">
+                <!-- Loop through mainNav and render nav groups with their corresponding menu items -->
+                <v-list-group
+                  v-for="([title, icon], navIndex) in mainNav"
+                  :key="navIndex"
+                  :value="title"
+                >
                   <template #activator="{ props }">
                     <v-list-item v-bind="props" :prepend-icon="icon" :title="title"></v-list-item>
                   </template>
 
-                  <template v-if="title === mainNav[0][0]">
-                    <v-list-item
-                      v-for="([title, icon, subtitle, to], i) in menuItemsNav1"
-                      :key="i"
-                      :prepend-icon="icon"
-                      :title="title"
-                      :subtitle="subtitle ?? undefined"
-                    >
-                      <template #append>
-                        <v-list-item-action end>
-                          <v-checkbox-btn v-model="formData.pages" :value="to"></v-checkbox-btn>
-                        </v-list-item-action>
-                      </template>
-                    </v-list-item>
-                  </template>
-
-                  <template v-if="title === mainNav[1][0]">
-                    <v-list-item
-                      v-for="([title, icon, subtitle, to], i) in menuItemsNav2"
-                      :key="i"
-                      :prepend-icon="icon"
-                      :title="title"
-                      :subtitle="subtitle ?? undefined"
-                    >
-                      <template #append>
-                        <v-list-item-action end>
-                          <v-checkbox-btn v-model="formData.pages" :value="to"></v-checkbox-btn>
-                        </v-list-item-action>
-                      </template>
-                    </v-list-item>
-                  </template>
-
-                  <template v-if="title === mainNav[2][0]">
-                    <v-list-item
-                      v-for="([title, icon, subtitle, to], i) in menuItemsNav3"
-                      :key="i"
-                      :prepend-icon="icon"
-                      :title="title"
-                      :subtitle="subtitle ?? undefined"
-                    >
-                      <template #append>
-                        <v-list-item-action end>
-                          <v-checkbox-btn v-model="formData.pages" :value="to"></v-checkbox-btn>
-                        </v-list-item-action>
-                      </template>
-                    </v-list-item>
-                  </template>
-
-                  <template v-if="title === mainNav[3][0]">
-                    <v-list-item
-                      v-for="([title, icon, subtitle, to], i) in menuItemsNav4"
-                      :key="i"
-                      :prepend-icon="icon"
-                      :title="title"
-                      :subtitle="subtitle ?? undefined"
-                    >
-                      <template #append>
-                        <v-list-item-action end>
-                          <v-checkbox-btn v-model="formData.pages" :value="to"></v-checkbox-btn>
-                        </v-list-item-action>
-                      </template>
-                    </v-list-item>
-                  </template>
-
-                  <template v-if="title === mainNav[4][0]">
-                    <v-list-item
-                      v-for="([title, icon, subtitle, to], i) in menuItemsNav5"
-                      :key="i"
-                      :prepend-icon="icon"
-                      :title="title"
-                      :subtitle="subtitle ?? undefined"
-                    >
-                      <template #append>
-                        <v-list-item-action end>
-                          <v-checkbox-btn v-model="formData.pages" :value="to"></v-checkbox-btn>
-                        </v-list-item-action>
-                      </template>
-                    </v-list-item>
-                  </template>
+                  <!-- Render menu items for this nav group -->
+                  <v-list-item
+                    v-for="([itemTitle, itemIcon, itemSubtitle, itemPath], itemIndex) in navMenuMap[title] || []"
+                    :key="itemIndex"
+                    :prepend-icon="itemIcon"
+                    :title="itemTitle"
+                    :subtitle="itemSubtitle ?? undefined"
+                  >
+                    <template #append>
+                      <v-list-item-action end>
+                        <v-checkbox-btn v-model="formData.pages" :value="itemPath"></v-checkbox-btn>
+                      </v-list-item-action>
+                    </template>
+                  </v-list-item>
                 </v-list-group>
               </v-list>
             </v-col>

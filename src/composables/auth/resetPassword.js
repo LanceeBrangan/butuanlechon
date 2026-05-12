@@ -2,6 +2,14 @@ import { supabase, formActionDefault } from '@/utils/supabase'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { resetSessionFlag } from '@/router'
+
+async function logout() {
+  await supabase.auth.signOut()
+  resetSessionFlag()          // ← so next login gets a fresh JWT refresh
+  router.push({ name: 'login' })
+}
+
 export function useResetPassword() {
   const router = useRouter()
 

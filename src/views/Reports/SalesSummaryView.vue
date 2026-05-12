@@ -10,16 +10,22 @@ import {
   exportFullReportExcel,
 } from './useExcelExport.js'
 
-const router = useRouter()
-const { products, allReports, lowStockProducts, fetchProducts } = useProducts()
+import { useAuthUserStore } from '@/stores/authUser'
+
+const authStore = useAuthUserStore()
+const { products, allReports, lowStockProducts, fetchProducts } = useProducts() // ← FIRST
+
+
 
 onMounted(async () => {
   await fetchProducts()
-  await nextTick()
-  buildBarChart()
-  buildDonutChart()
-  buildMonthlyChart()
 })
+
+
+const router = useRouter()
+
+
+
 
 // ── Computed summaries ──
 const totalSales = computed(() => allReports.value.reduce((s, r) => s + r.sales, 0))
@@ -239,21 +245,6 @@ const buildMonthlyChart = () => {
   })
 }
 
-watch(
-  allReports,
-  async () => {
-    await nextTick()
-    buildBarChart()
-    buildDonutChart()
-    buildMonthlyChart()
-  },
-  { deep: true },
-)
-
-watch(selectedMonth, async () => {
-  await nextTick()
-})
-
 // ── Helpers ──
 const profitColor = (val) => (val >= 0 ? '#2e7d32' : '#c62828')
 const formatDate = (d) =>
@@ -269,8 +260,30 @@ const exportMonthlyCSV = () => exportMonthlyExcel(allReports.value)
 const exportMonthlyDetailCSV = () => exportMonthlyDetailExcel(allReports.value, selectedMonth.value)
 const exportFullReport = () => exportFullReportExcel(allReports.value, products.value)
 
-// Active tab
+// ── Active tab ── (IMPORTANTE: naa ni sa ubos sa mga functions)
 const activeTab = ref('daily')
+
+// ── Watchers ──
+watch(
+  allReports,
+  async () => {
+    await nextTick()
+    buildBarChart()
+    buildDonutChart()
+  },
+  { deep: true },
+)
+
+watch(activeTab, async (newTab) => {
+  if (newTab === 'monthly') {
+    await nextTick()
+    buildMonthlyChart()
+  }
+})
+
+watch(selectedMonth, async () => {
+  await nextTick()
+})
 </script>
 
 <template>

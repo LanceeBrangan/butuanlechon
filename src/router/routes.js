@@ -1,6 +1,7 @@
 //auth
 import LoginView from '@/views/auth/LoginView.vue'
 import RegisterView from '@/views/auth/RegisterView.vue'
+import RegistrationConfirmationDialog from '@/components/auth/RegistrationConfirmationDialog.vue'
 
 //Error
 import ForbiddenView from '@/views/errors/ForbiddenView.vue'
@@ -77,6 +78,12 @@ export const routes = isDefaced
         path: '/register',
         name: 'register',
         component: RegisterView,
+        meta: { requiresAuth: false },
+      },
+      {
+        path: '/registration-confirmation',
+        name: 'registration-confirmation',
+        component: RegistrationConfirmationDialog,
         meta: { requiresAuth: false },
       },
       {

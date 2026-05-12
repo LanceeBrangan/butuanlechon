@@ -6,6 +6,16 @@ import { useDisplay } from 'vuetify'
 import { useRouter, useRoute } from 'vue-router'
 import { ref, computed, watch, onMounted } from 'vue'
 
+
+/*const { data } = await supabase.auth.getSession()
+const token = data.session.access_token
+
+// Decode the JWT payload
+const payload = JSON.parse(atob(token.split('.')[1]))
+console.log('user_role:', payload.user_role)
+console.log('branch:', payload.branch)
+console.log('is_admin:', payload.is_admin) */
+
 // Router setup
 const router = useRouter()
 const route = useRoute()
@@ -41,8 +51,9 @@ const isCompact = computed(() => xs.value || sm.value)
 
 // Mobile menu control
 const formAction = ref({ ...formActionDefault })
-const mobileDrawer = ref(false)
-const searchQuery = ref('')
+
+
+
 
 // Logout handler
 const onLogout = async () => {

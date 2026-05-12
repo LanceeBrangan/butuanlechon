@@ -4,6 +4,10 @@ import UsersTable from '@/components/system/manage-users/UsersTable.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useDisplay } from 'vuetify'
 import { ref } from 'vue'
+import { supabase } from '@/utils/supabase'
+
+
+
 
 // Utilize pre-defined vue functions
 const { mobile } = useDisplay()

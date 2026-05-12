@@ -1,56 +1,69 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthUserStore } from '@/stores/authUser'
+import { supabase } from '@/utils/supabase'
 import { routes } from './routes'
+import { utils } from 'xlsx'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 })
 
+let sessionRefreshed = false  // reset on logout, see below
+
 router.beforeEach(async (to) => {
-  // Use Pinia Store
   const authStore = useAuthUserStore()
-  // Load if user is logged in
+
+  // ✅ FIX: Force JWT refresh ONCE per app load, BEFORE reading anything.
+  // This ensures the custom_access_token_hook has fired and claims are present.
+  if (!sessionRefreshed) {
+    await supabase.auth.refreshSession()
+    sessionRefreshed = true
+  }
+
+  // Step 1 — check session (now reads the freshly-hydrated session)
   const isLoggedIn = await authStore.isAuthenticated()
 
-  // Redirect to appropriate page if accessing home route
   if (to.name === 'home') {
     return isLoggedIn ? { name: 'dashboard' } : { name: 'login' }
   }
 
-  // If logged in, prevent access to login or register pages
   if (isLoggedIn && (to.name === 'login' || to.name === 'register')) {
-    // redirect the user to the dashboard page
     return { name: 'dashboard' }
   }
 
-  // If not logged in, prevent access to system pages
   if (!isLoggedIn && to.meta.requiresAuth) {
-    // redirect the user to the login page
     return { name: 'login' }
   }
 
-  // Check if the user is logged in
   if (isLoggedIn) {
-    // Load user data if not already done
     if (!authStore.userData) await authStore.getUserInformation()
 
-    // Get the user role
+    if (authStore.authBranchIds.length === 0) await authStore.getAuthBranchIds()
+
     const isSuperAdmin = authStore.userRole === 'Super Administrator'
 
-    // Load if not super admin
     if (!isSuperAdmin) {
-      if (authStore.authPages.length == 0) await authStore.getAuthPages(authStore.userRole)
+      const roleName = authStore.userData?.user_role || authStore.userData?.role
+      if (authStore.authPages.length === 0 && roleName) {
+        await authStore.getAuthPages(roleName)
+      }
 
-      // Check page that is going to if it is in role pages
       const isAccessible = authStore.authPages.includes(to.path)
-
-      // Forbid access if not in role pages and if page is not default page
       if (!isAccessible && !to.meta.isDefault) {
         return { name: 'forbidden' }
       }
     }
   }
 })
+
+// ✅ IMPORTANT: Reset the flag on logout so the next login gets a fresh refresh
+// Call this wherever you handle sign-out:
+// sessionRefreshed = false  ← put this in your logout action
+// At the bottom of router/index.js — replace the last line with:
+
+export function resetSessionFlag() {
+  sessionRefreshed = false
+}
 
 export default router

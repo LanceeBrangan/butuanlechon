@@ -3,17 +3,20 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProducts } from '@/composables/products/index.js'
 
+const { products, lowStockProducts, fetchProducts } = useProducts() // ← FIRST
+
+
+onMounted(async () => {
+  await fetchProducts()
+})
+
 
 const router = useRouter()
 const isRefreshing = ref(false)
 const searchQuery = ref('')
 const filterLevel = ref('all') // 'all' | 'critical' | 'low'
 
-const { products, lowStockProducts, fetchProducts } = useProducts()
 
-onMounted(async () => {
-  await fetchProducts()
-})
 
 const refreshStock = async () => {
   isRefreshing.value = true

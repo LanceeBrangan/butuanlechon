@@ -4,35 +4,31 @@ import {
   menuItemsNav1,
   menuItemsNav2,
   menuItemsNav3,
-  menuItemsNav4,
-  menuItemsNav5,
 } from './sideNavigation'
 import { useAuthUserStore } from '@/stores/authUser'
-import { ref, onMounted } from 'vue'
-import { useDisplay } from 'vuetify'
+import { ref, watch } from 'vue'
 
 const props = defineProps(['isDrawerVisible'])
-
-const { mobile } = useDisplay()
 const authStore = useAuthUserStore()
 
-const isMounted = ref(false)
 const noAccessPages = ref([])
 const editableMenuItemsNav1 = ref([...menuItemsNav1])
 const editableMenuItemsNav2 = ref([...menuItemsNav2])
 const editableMenuItemsNav3 = ref([...menuItemsNav3])
-const editableMenuItemsNav4 = ref([...menuItemsNav4])
-const editableMenuItemsNav5 = ref([...menuItemsNav5])
 
 const onFilterPages = () => {
+  // Reset every time so re-runs are clean
+  noAccessPages.value = []
+  editableMenuItemsNav1.value = [...menuItemsNav1]
+  editableMenuItemsNav2.value = [...menuItemsNav2]
+  editableMenuItemsNav3.value = [...menuItemsNav3]
+
   if (authStore.userRole === 'Super Administrator') return
 
   const menuItems = [
     { items: editableMenuItemsNav1, title: mainNav[0][0] }, // Products
     { items: editableMenuItemsNav2, title: mainNav[1][0] }, // Reports
     { items: editableMenuItemsNav3, title: mainNav[2][0] }, // User Management
-    { items: editableMenuItemsNav4, title: mainNav[3][0] },
-    { items: editableMenuItemsNav5, title: mainNav[4][0] },
   ]
 
   menuItems.forEach(({ items, title }) => {
@@ -41,15 +37,24 @@ const onFilterPages = () => {
   })
 }
 
-onMounted(() => {
-  onFilterPages()
-  isMounted.value = true
-})
+// Watch authPages length — fires when router guard populates it after refresh
+// Also fires immediately if already populated (e.g. navigating between pages)
+watch(
+  () => authStore.authPages.length,
+  () => onFilterPages(),
+  { immediate: true }
+)
+
+// Also watch userRole in case it resolves after authPages
+watch(
+  () => authStore.userRole,
+  () => onFilterPages(),
+)
 </script>
 
 <template>
   <v-navigation-drawer permanent width="300" expand-on-hover rail>
-    <v-list v-if="isMounted" density="compact" nav>
+    <v-list density="compact" nav>
       <v-list-item
         prepend-icon="mdi-view-dashboard"
         title="Dashboard"

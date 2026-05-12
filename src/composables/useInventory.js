@@ -1,6 +1,11 @@
 import { supabase, supabaseAdmin } from '@/utils/supabase'
 import { useAuthUserStore } from '@/stores/authUser'
 
+
+const { data } = await supabase.auth.getSession()
+console.log(data.session.user)
+// Look for: app_metadata or user_metadata containing is_admin, user_role, branch
+
 export function useInventory() {
   const authStore = useAuthUserStore()
 
